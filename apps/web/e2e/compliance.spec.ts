@@ -117,6 +117,8 @@ test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR se
   const before = Number((await hr.getByTestId('vnd-progress').innerText()).split('/')[0]!.trim());
 
   // Employee acknowledges
+  emp.on('response', async (r) => { if (r.url().includes('/signing/') || r.url().includes('/acknowledge')) console.log('EMP', r.status(), r.url(), (await r.text().catch(() => '')).slice(0, 160)); });
+  emp.on('pageerror', (e) => console.log('EMP PAGEERR', e.message));
   await emp.goto('/ru/vnd');
   await expect(emp.getByRole('heading', { name: 'ВНД', level: 1 })).toBeVisible();
   const card = emp.getByRole('link', { name: new RegExp(title) });
@@ -126,7 +128,8 @@ test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR se
   await card.click();
   await emp.getByRole('button', { name: 'Подтвердить ознакомление' }).click();
   const ack = emp.getByRole('dialog');
-  await expect(ack.getByTestId('vnd-qr')).toBeVisible();
+  await expect(ack.getByTestId('vnd-qr').or(ack.getByRole('alert'))).toBeVisible();
+  if (await ack.getByRole('alert').isVisible()) throw new Error(`Signing error: ${await ack.getByRole('alert').innerText()}`);
   await shot(emp, '04-vnd-ack-qr');
   await ack.getByRole('tab', { name: 'ЭЦП НУЦ' }).click();
   await ack.getByLabel('PIN-код ключа').fill('123456');
