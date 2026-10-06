@@ -37,3 +37,5 @@ To go live, each item needs the credentials or accreditation listed. Nothing is 
 | CSP allows `'unsafe-inline'` scripts | Required by Next.js inline bootstrap without nonces. Moving to a nonce-based CSP via middleware is a follow-up (security review L2). React escapes output and markdown is rendered without raw HTML, so no known XSS sink exists. |
 | Zip-bomb check trusts declared sizes | Candidate import checks the zip central directory (≤ 20 MB uncompressed, ≤ 1000 entries); the 2 MB upload cap is the backstop. |
 | Face verification | Sandbox only checks that the selfie is a valid image (see table above). |
+| Questionnaire "file" fields | The candidate questionnaire builder omits the file field type: answers have no upload endpoint (attach documents via the document checklist instead). |
+| Compose stack in CI | Each image was verified separately. The full `docker compose up` (postgres, minio, mailpit) was not run inside the build sandbox. |
