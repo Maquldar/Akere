@@ -1,0 +1,65 @@
+# One-command local stack: docker compose up --build
+# Then seed demo data: docker compose run --rm -e SEED_FORCE=true api pnpm exec tsx prisma/seed/index.ts
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: akere
+      POSTGRES_PASSWORD: akere
+      POSTGRES_DB: akere
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U akere"]
+      interval: 5s
+      retries: 10
+    ports: ["5432:5432"]
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: akere
+      MINIO_ROOT_PASSWORD: akere-minio-secret
+    volumes: [miniodata:/data]
+    ports: ["9000:9000", "9001:9001"]
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on: [minio]
+    entrypoint: >
+      sh -c "until mc alias set local http://minio:9000 akere akere-minio-secret; do sleep 1; done;
+             mc mb --ignore-existing local/akere"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["8025:8025", "1025:1025"]
+
+  api:
+    build: { context: ., dockerfile: Dockerfile.api }
+    depends_on:
+      postgres: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
+    environment:
+      DATABASE_URL: postgresql://akere:akere@postgres:5432/akere
+      APP_URL: http://localhost:3000
+      DEMO_MODE: "true"
+      SIGNING_MASTER_KEY: ${SIGNING_MASTER_KEY:?set SIGNING_MASTER_KEY in .env (openssl rand -hex 32)}
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: akere
+      S3_ACCESS_KEY: akere
+      S3_SECRET_KEY: akere-minio-secret
+      SMTP_URL: smtp://mailpit:1025
+      COOKIE_SECURE: "false"
+    ports: ["4000:4000"]
+
+  web:
+    build: { context: ., dockerfile: Dockerfile.web }
+    depends_on: [api]
+    environment:
+      API_URL: http://api:4000
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:
+  miniodata:
