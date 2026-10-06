@@ -14,6 +14,9 @@ import documentsRoutes from './documents/routes';
 import signingRoutes from './signing/routes';
 import employeesRoutes from './employees/routes';
 import deputiesRoutes from './deputies/routes';
+import requestsRoutes from './requests/routes';
+import uploadsRoutes from './uploads/routes';
+import vacationScheduleRoutes from './vacation-schedule/routes';
 
 /** Every module is a Fastify plugin. Later phases append here (one line per module). */
 export async function registerModules(app: FastifyInstance) {
@@ -32,4 +35,7 @@ export async function registerModules(app: FastifyInstance) {
   await app.register(signingRoutes, { prefix: '/signing' });
   await app.register(employeesRoutes, { prefix: '/employees' });
   await app.register(deputiesRoutes, { prefix: '/deputies' });
+  await app.register(requestsRoutes); // /request-types, /requests
+  await app.register(uploadsRoutes); // /uploads
+  await app.register(vacationScheduleRoutes, { prefix: '/vacation-schedule' });
 }
