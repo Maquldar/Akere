@@ -571,3 +571,9 @@ Public endpoints (rate limited 60 req/min per key):
 | time.manage | ✓ | ✓ | ✓ (subtree) | |
 | time.export | ✓ | ✓ | | |
 | report.read | ✓ | ✓ | ✓ (subtree) | |
+
+## Addendum (P6 implementation notes)
+- Extra `BUSINESS_RULE` rules in `/time`: `GEOLOCATION_REQUIRED`, `SELFIE_REQUIRED`, `ALREADY_SCHEDULED`, `NO_SUBORDINATES`, `DATE_IN_FUTURE`, `SHIFT_IN_PAST`.
+- `ShiftView.location: Option|null`; `GET /time/shift-templates?all=true` includes inactive templates; T-13 cell code `Я` = normal presence.
+- Computation details: an unmarked break on a closed day is auto-deducted (if ≥ 4 h worked remain); time before shift start is not work; all hours on a day off (no shift / public holiday / "Работа в выходной") are 2x, while scheduled weekend shifts (e.g. 2/2) are normal; GPS accuracy added to the geofence radius is capped at 150 m.
+- Editing a shift resets it to DRAFT. Norm hours = working days × 8 (not reduced for absences or mid-month hire). T-13 confirmation total = managers with direct reports among the sheet rows.

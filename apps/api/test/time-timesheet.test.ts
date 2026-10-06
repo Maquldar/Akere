@@ -81,12 +81,13 @@ describe('timesheet', () => {
     expect(sheet.days).toHaveLength(all.length);
     expect(sheet.days[all.indexOf(holiday)]).toMatchObject({ isHoliday: true, isWeekend: true });
     const row1 = sheet.rows.find((r: { employee: { employeeId: string } }) => r.employee.employeeId === emp1.employeeId);
-    const cell = (row: { cells: { day: number }[] }, d: string) => row.cells[all.indexOf(d)] as { hours: number | null; codes: string[]; deviation: boolean };
+    type Cell = { day: number; hours: number | null; codes: string[]; deviation: boolean };
+    const cell = (row: { cells: Cell[] }, d: string) => row.cells[all.indexOf(d)]!;
     expect(row1.normHours).toBe(workdays.length * 8);
     expect(cell(row1, nn!)).toMatchObject({ hours: 0, codes: ['НН'], deviation: true });
     expect(cell(row1, ot!)).toMatchObject({ hours: 11.5, codes: ['Я', 'С'], deviation: true });
     expect(cell(row1, vac1!).codes).toEqual(['О']);
-    expect(cell(row1, rest[0]!)).toMatchObject({ hours: 8.1, codes: ['Я'], deviation: false });
+    expect(cell(row1, rest[0]!)).toMatchObject({ hours: 8, codes: ['Я'], deviation: false });
     expect(cell(row1, saturday)).toMatchObject({ hours: 4, codes: ['РВ', 'Н'] });
     expect(cell(row1, holiday).codes).toEqual(['П']);
     const sunday = all.find((d) => isoWeekdayOf(d) === 7)!;

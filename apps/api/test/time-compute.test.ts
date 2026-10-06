@@ -27,8 +27,9 @@ describe('time computations', () => {
   });
 
   it('computes a normal day with a break', () => {
-    const s = day({ marks: marks(D, ['IN', '09:58'], ['BREAK_START', '13:00'], ['BREAK_END', '14:00'], ['OUT', '19:02']) });
-    expect(s.workedMinutes).toBe(484);
+    const s = day({ marks: marks(D, ['IN', '09:40'], ['BREAK_START', '13:00'], ['BREAK_END', '14:00'], ['OUT', '19:02']) });
+    expect(s.workedMinutes).toBe(482); // arriving 20 min early is not working time
+    expect(s.inAt!.toISOString()).toBe(at(D, '09:40').toISOString());
     expect(s.breakMinutes).toBe(60);
     expect(s.lateMinutes).toBe(0);
     expect(s.overtimeMinutes).toBe(0);

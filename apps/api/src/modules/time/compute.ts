@@ -118,6 +118,11 @@ export function groupMarksByDay<M extends MarkLike>(marks: M[], tz: string): Map
   return out;
 }
 
+/** Drops interval parts before `start`. */
+export function clipBefore(intervals: Interval[], start: Date): Interval[] {
+  return intervals.filter((x) => x.to > start).map((x) => (x.from < start ? { ...x, from: start } : x));
+}
+
 export const plannedMinutesOf = (s: ShiftLike | null) => (s ? Math.max(0, Math.round(minutes(s.startAt, s.endAt)) - s.breakMinutes) : 0);
 
 /** Minutes of the intervals that fall into 22:00–06:00 local time. */
@@ -187,7 +192,11 @@ export function summarizeDay(i: DayInput): DaySummary {
   const isToday = i.date === i.today;
   const isPast = i.date < i.today;
   const planned = plannedMinutesOf(shift);
-  const { intervals, state, inAt, outAt } = buildIntervals(i.marks, isToday ? now : null);
+  const built = buildIntervals(i.marks, isToday ? now : null);
+  const { state, inAt, outAt } = built;
+  const offDayWork = !shift || shift.title === DAY_OFF_WORK_TITLE || i.publicHoliday;
+  // Arriving before the shift start is not working time on a regular day (no "overtime" for coming early).
+  const intervals = shift && !offDayWork ? clipBefore(built.intervals, shift.startAt) : built.intervals;
   const open = state !== 'out';
   const gross = Math.round(sumMinutes(intervals, 'work'));
   let breaks = Math.round(sumMinutes(intervals, 'break'));
@@ -197,7 +206,6 @@ export function summarizeDay(i: DayInput): DaySummary {
   if (!open && breaks === 0 && shift && shift.breakMinutes > 0 && gross >= AUTO_BREAK_MIN_WORK + shift.breakMinutes) autoBreak = shift.breakMinutes;
   breaks += autoBreak;
   const worked = gross - autoBreak;
-  const offDayWork = !shift || shift.title === DAY_OFF_WORK_TITLE || i.publicHoliday;
 
   let late = 0;
   if (shift && inAt) {
