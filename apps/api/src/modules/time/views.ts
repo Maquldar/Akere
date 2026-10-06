@@ -54,7 +54,7 @@ export const markInclude = { employee: { include: empRefInclude } } as const;
 export type MarkRow = Prisma.TimeMarkGetPayload<{ include: typeof markInclude }>;
 
 export function markView(m: MarkRow): TimeMarkView {
-  const { employeeId: _e, ...ref } = empRef(m.employee);
+  const ref = empRef(m.employee);
   return {
     id: m.id, employee: ref, type: m.type, at: m.at.toISOString(), distanceM: m.distanceM === null ? null : Math.round(m.distanceM),
     verification: m.verification, verificationNote: m.verificationNote, selfieUrl: m.selfieFileId ? fileUrl(m.selfieFileId) : null, source: m.source,

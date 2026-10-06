@@ -46,7 +46,8 @@ export async function purgeUploads(now: Date = new Date()): Promise<{ deleted: n
   });
   if (!stale.length) return { deleted: 0 };
   const referenced = await prisma.request.findMany({ where: { attachmentFileIds: { hasSome: stale.map((f) => f.id) } }, select: { attachmentFileIds: true } });
-  const keep = new Set(referenced.flatMap((r) => r.attachmentFileIds));
+  const sick = await prisma.sickLeave.findMany({ where: { fileId: { in: stale.map((f) => f.id) } }, select: { fileId: true } });
+  const keep = new Set([...referenced.flatMap((r) => r.attachmentFileIds), ...sick.map((s) => s.fileId!)]);
   let deleted = 0;
   for (const f of stale) {
     if (keep.has(f.id)) continue;

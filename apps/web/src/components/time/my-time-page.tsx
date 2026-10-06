@@ -254,7 +254,15 @@ function ShiftCard({ day, fetchedAt }: { day: MyDay; fetchedAt: number }) {
       </>
     );
   } else if (day.status === 'ABSENT') {
-    body = <EmptyState compact icon={<CalendarX2 aria-hidden />} title={t('absentToday')} description={t('absentTodayHint')} />;
+    body = (
+      <>
+        <EmptyState compact icon={<CalendarX2 aria-hidden />} title={t('absentToday')} description={t('absentTodayHint')} />
+        <Button variant="outline" size="lg" className="w-full" onClick={() => setIdentity('IN')}>
+          <Play />
+          {t('clockIn')}
+        </Button>
+      </>
+    );
   } else {
     // NOT_STARTED / NO_MARKS / DAY_OFF
     body = (

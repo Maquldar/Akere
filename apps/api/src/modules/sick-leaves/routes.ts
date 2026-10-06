@@ -28,7 +28,7 @@ const idParam = z.object({ id });
 type Row = SickLeave & { employee: Prisma.EmployeeGetPayload<{ include: typeof empRefInclude }> };
 
 function view(s: Row, files: Map<string, StoredFile>): SickLeaveView {
-  const { employeeId: _e, ...ref } = empRef(s.employee);
+  const ref = empRef(s.employee);
   const f = s.fileId ? files.get(s.fileId) : undefined;
   return {
     id: s.id, employee: ref, number: s.number, startDate: toDateStr(s.startDate), endDate: toDateStr(s.endDate),

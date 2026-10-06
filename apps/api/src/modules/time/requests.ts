@@ -76,7 +76,7 @@ export default async function requestRoutes(fastify: FastifyInstance) {
       if (mgr) {
         await notify({
           tenantId: u.tenantId, userId: mgr.userId, type: 'time.request_created', title: `${KIND_LABEL[b.kind]}: ${empRef(r.employee).shortName}`,
-          body: `Дата: ${date}. ${b.reason}`, link: '/timelog/requests', email: false,
+          body: `Дата: ${date}. ${b.reason}`, link: '/time/timesheet?tab=requests', email: false,
         });
       }
     }
@@ -139,10 +139,10 @@ export default async function requestRoutes(fastify: FastifyInstance) {
     const r = await prisma.timeRequest.findUniqueOrThrow({ where: { id: r0.id }, include: requestInclude });
     await notify({
       tenantId: u.tenantId, userId: r.employee.userId, type: approve ? 'time.request_approved' : 'time.request_rejected',
-      title: `${KIND_LABEL[r.kind]} ${approve ? 'согласована' : 'отклонена'}`, body: `Дата: ${date}${req.body.comment ? `. ${req.body.comment}` : ''}`, link: '/my-time', email: false,
+      title: `${KIND_LABEL[r.kind]} ${approve ? 'согласована' : 'отклонена'}`, body: `Дата: ${date}${req.body.comment ? `. ${req.body.comment}` : ''}`, link: '/time', email: false,
     });
     if (substituteUserId) {
-      await notify({ tenantId: u.tenantId, userId: substituteUserId, type: 'time.substitution', title: `Вас назначили на замену ${date}`, body: d.shiftTitle ?? '', link: '/my-time', email: false });
+      await notify({ tenantId: u.tenantId, userId: substituteUserId, type: 'time.substitution', title: `Вас назначили на замену ${date}`, body: d.shiftTitle ?? '', link: '/time', email: false });
     }
     await audit(u, 'time.request_decide', 'TimeRequest', r.id, { decision: req.body.decision, kind: r.kind }, { ip: req.ip });
     return requestView(r, await deciderRefs([r.decidedById]));

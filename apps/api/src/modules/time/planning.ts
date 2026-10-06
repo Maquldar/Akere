@@ -225,7 +225,7 @@ export default async function planningRoutes(fastify: FastifyInstance) {
     await audit(u, 'time.shift_delete', 'Shift', s.id, { employeeId: s.employeeId, date: dateStrOf(s.date) }, { ip: req.ip });
     if (s.employeeId && s.status === 'PUBLISHED') {
       const e = await prisma.employee.findUnique({ where: { id: s.employeeId }, select: { userId: true } });
-      if (e) await notify({ tenantId: u.tenantId, userId: e.userId, type: 'time.shift_removed', title: `Смена ${dateStrOf(s.date)} отменена`, body: s.title, link: '/my-time/schedule', email: false });
+      if (e) await notify({ tenantId: u.tenantId, userId: e.userId, type: 'time.shift_removed', title: `Смена ${dateStrOf(s.date)} отменена`, body: s.title, link: '/time/schedule', email: false });
     }
     return reply.status(204).send();
   });
@@ -338,7 +338,7 @@ export default async function planningRoutes(fastify: FastifyInstance) {
     for (const e of users) {
       await notify({
         tenantId: u.tenantId, userId: e.userId, type: 'time.schedule_published', title: 'Опубликован график смен',
-        body: `Период ${b.from} — ${b.to}`, link: '/my-time/schedule', email: false,
+        body: `Период ${b.from} — ${b.to}`, link: '/time/schedule', email: false,
       });
     }
     await audit(u, 'time.shift_publish', 'Shift', null, { from: b.from, to: b.to, published: drafts.length }, { ip: req.ip });
@@ -363,7 +363,7 @@ export default async function planningRoutes(fastify: FastifyInstance) {
       if (mgr) notifyIds.add(mgr.userId);
     }
     for (const userId of notifyIds) {
-      await notify({ tenantId: u.tenantId, userId, type: 'time.shift_claimed', title: `${empRef(me).shortName} записался на открытую смену`, body: `${s.title}, ${dateStrOf(s.date)}`, link: '/scheduling', email: false });
+      await notify({ tenantId: u.tenantId, userId, type: 'time.shift_claimed', title: `${empRef(me).shortName} записался на открытую смену`, body: `${s.title}, ${dateStrOf(s.date)}`, link: '/time/planning', email: false });
     }
     const full = await prisma.shift.findUniqueOrThrow({ where: { id: s.id }, include: shiftInclude });
     return reply.status(201).send(shiftView(full));
@@ -392,7 +392,7 @@ export default async function planningRoutes(fastify: FastifyInstance) {
     const emp = await prisma.employee.findUniqueOrThrow({ where: { id: claim.employeeId }, select: { userId: true } });
     await notify({
       tenantId: u.tenantId, userId: emp.userId, type: approve ? 'time.claim_approved' : 'time.claim_rejected',
-      title: approve ? 'Вас назначили на открытую смену' : 'Запись на смену отклонена', body: `${s.title}, ${dateStrOf(s.date)}`, link: '/my-time', email: false,
+      title: approve ? 'Вас назначили на открытую смену' : 'Запись на смену отклонена', body: `${s.title}, ${dateStrOf(s.date)}`, link: '/time', email: false,
     });
     await audit(u, 'time.claim_decide', 'Shift', s.id, { claimId: claim.id, decision: req.body.decision }, { ip: req.ip });
     return shiftView(await prisma.shift.findUniqueOrThrow({ where: { id: s.id }, include: shiftInclude }));
