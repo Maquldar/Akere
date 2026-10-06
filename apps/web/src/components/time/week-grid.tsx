@@ -56,7 +56,7 @@ export function WeekGrid({
 
   return (
     <div className="relative overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-      <div className="max-h-[calc(100dvh-230px)] min-h-[320px] overflow-auto" role="region" aria-label={label} tabIndex={0}>
+      <div className="max-h-[calc(100dvh-230px)] overflow-auto" role="region" aria-label={label} tabIndex={0}>
         <div className="min-w-[1128px]" role="table" aria-label={label}>
           {/* Header */}
           <div className="sticky top-0 z-30 grid border-b border-border bg-surface" style={gridStyle} role="row">
@@ -138,7 +138,7 @@ export function WeekGrid({
                 key={row.employee.employeeId}
                 role="row"
                 className={cn('group/row grid border-b border-border last:border-b-0', mine && 'bg-primary-soft/30')}
-                style={{ ...gridStyle, gridTemplateRows: `repeat(${lanes}, auto) minmax(56px, auto)` }}
+                style={{ ...gridStyle, gridTemplateRows: lanes ? `repeat(${lanes}, auto) minmax(56px, auto)` : 'minmax(56px, auto)' }}
               >
                 <div
                   role="rowheader"

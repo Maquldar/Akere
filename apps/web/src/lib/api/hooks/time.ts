@@ -1,8 +1,7 @@
 'use client';
 
 import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, buildUrl, baseHeaders } from '../client';
-import { toApiError } from '../errors';
+import { apiFetch, buildUrl } from '../client';
 import { qk } from '../query-keys';
 import { uploadFiles } from '../upload';
 import type { Department, Page } from '../types';
@@ -264,31 +263,18 @@ export function useConfirmT13() {
   });
 }
 
-/** Downloads the T-13 xlsx (cookie session) and saves it under the server-provided name. */
-export async function downloadT13(q: Omit<T13Query, 'q'>): Promise<string> {
-  const res = await fetch(buildUrl('/time/t13/export', q), { credentials: 'include', headers: baseHeaders('GET') });
-  if (!res.ok) {
-    let body: unknown;
-    try {
-      body = await res.json();
-    } catch {
-      body = undefined;
-    }
-    throw toApiError(res.status, body, res.statusText);
-  }
-  const blob = await res.blob();
-  const cd = res.headers.get('Content-Disposition') ?? '';
-  const star = /filename\*=UTF-8''([^;]+)/i.exec(cd);
-  const plain = /filename="?([^";]+)"?/i.exec(cd);
-  const name = star ? decodeURIComponent(star[1]!) : (plain?.[1] ?? `T-13_${q.year}-${String(q.month).padStart(2, '0')}.xlsx`);
-  const url = URL.createObjectURL(blob);
+/**
+ * Downloads the T-13 xlsx: the browser fetches the API URL itself (cookie session, same origin), so the
+ * server's Content-Disposition names the file. Only rendered for users with `time.export`.
+ */
+export function downloadT13(q: Omit<T13Query, 'q'>): string {
+  const name = `T-13_${q.year}-${String(q.month).padStart(2, '0')}.xlsx`;
   const a = document.createElement('a');
-  a.href = url;
+  a.href = buildUrl('/time/t13/export', q);
   a.download = name;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
   return name;
 }
 

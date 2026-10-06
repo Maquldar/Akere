@@ -66,7 +66,9 @@ export function PdfViewer({ url, title, className }: { url: string; title: strin
           canvas.setAttribute('role', 'img');
           canvas.setAttribute('aria-label', t('pageOf', { page: i, total: doc.numPages }));
           el.appendChild(canvas);
-          await page.render({ canvas, viewport }).promise;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Canvas 2D is not available');
+          await page.render({ canvasContext: ctx, viewport }).promise;
           if (i === 1 && !cancelled) setState('ready');
         }
         if (!cancelled) setState('ready');

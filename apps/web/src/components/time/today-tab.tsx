@@ -209,7 +209,7 @@ export function TodayTab() {
           value={k ? k.needAttention : '—'}
           tone={k && k.needAttention > 0 ? 'danger' : 'default'}
           icon={<CircleAlert aria-hidden />}
-          hint={k ? (k.noMarks ? t('kpiNoMarks', { count: k.noMarks }) : t('kpiAllGood')) : undefined}
+          hint={k ? (k.noMarks ? t('kpiNoMarks', { count: k.noMarks }) : k.needAttention ? undefined : t('kpiAllGood')) : undefined}
         />
         <StatCard label={t('kpiOvertime')} value={k ? (k.overtimeMinutes ? dur(k.overtimeMinutes) : '—') : '—'} icon={<TrendingUp aria-hidden />} />
         <StatCard

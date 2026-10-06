@@ -82,7 +82,7 @@ function SickLeavesInner() {
           );
         },
       },
-      { id: 'days', header: t('colDays'), meta: { label: t('colDays'), className: 'tabular' }, cell: ({ row }) => t('daysCount', { count: row.original.days }) },
+      { id: 'days', header: t('colDays'), meta: { label: t('colDays'), className: 'tabular whitespace-nowrap' }, cell: ({ row }) => t('daysCount', { count: row.original.days }) },
       {
         id: 'source',
         header: t('colSource'),

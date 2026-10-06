@@ -144,12 +144,12 @@ function PlanningInner() {
 
   return (
     <div className="mx-auto w-full max-w-[1400px]">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0">
           <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.01em] text-fg sm:text-2xl">{weekTitle(anchor, locale)}</h1>
-          <p className="mt-1 text-sm text-fg-muted">{t('subtitle')}</p>
+          <p className="mt-1 truncate text-sm text-fg-muted">{t('subtitle')}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 xl:shrink-0 xl:flex-nowrap">
           {(pending.data?.total ?? 0) > 0 && (
             <Button variant="outline" asChild>
               <Link href="/time/timesheet?tab=requests">

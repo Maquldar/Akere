@@ -202,15 +202,15 @@ export function T13Tab() {
       return m < 1 ? { year: year - 1, month: 12 } : m > 12 ? { year: year + 1, month: 1 } : { year, month: m };
     });
 
-  const download = async () => {
+  const download = () => {
     setDownloading(true);
     try {
-      const name = await downloadT13({ ...ym, departmentId: dept === ALL ? undefined : dept });
+      const name = downloadT13({ ...ym, departmentId: dept === ALL ? undefined : dept });
       toast.success(t('downloaded', { name }));
-    } catch (e) {
-      toast.error(isApiError(e) ? e.message : tc('error'));
+    } catch {
+      toast.error(tc('error'));
     } finally {
-      setDownloading(false);
+      setTimeout(() => setDownloading(false), 800);
     }
   };
 

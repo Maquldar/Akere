@@ -94,7 +94,8 @@
     },
     "pdf": {
       "download": "Download PDF",
-      "unavailable": "The document cannot be displayed"
+      "unavailable": "The document cannot be displayed",
+      "page": "Page {page} of {total}"
     },
     "route": {
       "noSteps": "The route has not started yet",

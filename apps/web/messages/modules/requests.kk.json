@@ -94,7 +94,8 @@
     },
     "pdf": {
       "download": "PDF жүктеу",
-      "unavailable": "Құжатты қарау мүмкін емес"
+      "unavailable": "Құжатты қарау мүмкін емес",
+      "page": "{total} беттің {page}-беті"
     },
     "route": {
       "noSteps": "Бағыт әлі басталмаған",

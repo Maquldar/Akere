@@ -88,13 +88,19 @@ function ShiftCard({ day, fetchedAt }: { day: MyDay; fetchedAt: number }) {
   const marks = useMemo(() => [...day.marks].sort((a, b) => a.at.localeCompare(b.at)), [day.marks]);
   const firstIn = marks.find((m) => m.type === 'IN');
   const lastOut = [...marks].reverse().find((m) => m.type === 'OUT');
+  const lastIn = [...marks].reverse().find((m) => m.type === 'IN');
   const lastBreak = [...marks].reverse().find((m) => m.type === 'BREAK_START');
-  const live = day.status === 'ON_SHIFT' || day.status === 'ON_BREAK';
-  const elapsed = now && day.status === 'ON_SHIFT' ? Math.max(0, (now.getTime() - fetchedAt) / 60_000) : 0;
+  // An open session after the scheduled end comes back as NO_OUT; it is still live until clock-out.
+  const lastMark = marks.at(-1);
+  const openSession = Boolean(lastMark && lastMark.type !== 'OUT' && Date.now() - new Date(lastMark.at).getTime() < 20 * 3_600_000);
+  const status: MyDay['status'] =
+    day.status === 'ON_SHIFT' || day.status === 'ON_BREAK' || !openSession ? day.status : lastMark!.type === 'BREAK_START' ? 'ON_BREAK' : 'ON_SHIFT';
+  const live = status === 'ON_SHIFT' || status === 'ON_BREAK';
+  const elapsed = now && status === 'ON_SHIFT' ? Math.max(0, (now.getTime() - fetchedAt) / 60_000) : 0;
   const worked = day.workedMinutes + elapsed;
   const planned = shift ? shiftMinutes(shift) : 8 * 60;
   const remaining = shift && now ? Math.max(0, (new Date(shift.endAt).getTime() - now.getTime()) / 60_000) : null;
-  const breakFor = day.status === 'ON_BREAK' && lastBreak && now ? (now.getTime() - new Date(lastBreak.at).getTime()) / 60_000 : 0;
+  const breakFor = status === 'ON_BREAK' && lastBreak && now ? (now.getTime() - new Date(lastBreak.at).getTime()) / 60_000 : 0;
   // Before the first mark: lateness grows live until the shift ends (M4 "Опоздание 7ч 25м").
   const pendingLate =
     shift && now && (day.status === 'NOT_STARTED' || day.status === 'NO_MARKS') && !firstIn && now.getTime() < new Date(shift.endAt).getTime()
@@ -174,25 +180,25 @@ function ShiftCard({ day, fetchedAt }: { day: MyDay; fetchedAt: number }) {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[32px] font-semibold leading-none tracking-tight text-fg tabular">{dur(worked)}</span>
-              <span className={cn('relative flex size-2.5', day.status === 'ON_BREAK' && 'opacity-60')} aria-hidden>
-                {day.status === 'ON_SHIFT' && <span className="absolute inline-flex size-full animate-ping rounded-full bg-green-solid opacity-60" />}
-                <span className={cn('relative inline-flex size-2.5 rounded-full', day.status === 'ON_BREAK' ? 'bg-orange-solid' : 'bg-green-solid')} />
+              <span className={cn('relative flex size-2.5', status === 'ON_BREAK' && 'opacity-60')} aria-hidden>
+                {status === 'ON_SHIFT' && <span className="absolute inline-flex size-full animate-ping rounded-full bg-green-solid opacity-60" />}
+                <span className={cn('relative inline-flex size-2.5 rounded-full', status === 'ON_BREAK' ? 'bg-orange-solid' : 'bg-green-solid')} />
               </span>
             </div>
             <p className="mt-1.5 text-[13px] text-fg-muted">
-              {day.status === 'ON_BREAK' ? t('onBreakFor', { duration: dur(breakFor) }) : remaining !== null ? t('untilEnd', { duration: dur(remaining) }) : t('onShift')}
+              {status === 'ON_BREAK' ? t('onBreakFor', { duration: dur(breakFor) }) : remaining ? t('untilEnd', { duration: dur(remaining) }) : t('onShift')}
             </p>
           </div>
-          {firstIn && (
+          {lastIn && (
             <div className="text-right text-xs text-fg-subtle">
               {t('inAt')}
-              <div className="text-[15px] font-semibold text-fg tabular">{timeOf(firstIn.at, locale)}</div>
+              <div className="text-[15px] font-semibold text-fg tabular">{timeOf(lastIn.at, locale)}</div>
             </div>
           )}
         </div>
         {progress}
         <div className="mt-4 grid grid-cols-2 gap-2">
-          {day.status === 'ON_BREAK' ? (
+          {status === 'ON_BREAK' ? (
             <Button variant="outline" size="lg" onClick={() => doBreak('BREAK_END')} loading={createMark.isPending}>
               <Play />
               {t('endBreak')}
@@ -203,7 +209,7 @@ function ShiftCard({ day, fetchedAt }: { day: MyDay; fetchedAt: number }) {
               {t('startBreak')}
             </Button>
           )}
-          <Button size="lg" onClick={() => setIdentity('OUT')} disabled={day.status === 'ON_BREAK'}>
+          <Button size="lg" onClick={() => setIdentity('OUT')} disabled={status === 'ON_BREAK'}>
             <LogOut />
             {t('clockOut')}
           </Button>
@@ -234,17 +240,11 @@ function ShiftCard({ day, fetchedAt }: { day: MyDay; fetchedAt: number }) {
           />
         </div>
         <div className="mt-4 flex flex-col gap-1.5">
-          {day.status === 'NO_OUT' && (
-            <Button size="lg" onClick={() => setIdentity('OUT')}>
-              <LogOut />
-              {t('clockOut')}
-            </Button>
-          )}
           <Button variant="outline" size="lg" onClick={() => setCorrection(true)}>
             <FilePenLine />
             {t('requestCorrection')}
           </Button>
-          {day.status === 'FINISHED' && (
+          {(day.status === 'FINISHED' || day.status === 'NO_OUT') && (
             <Button variant="ghost" size="sm" onClick={() => setIdentity('IN')}>
               <LogIn />
               {t('clockInAgain')}

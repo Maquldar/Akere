@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Browser, type BrowserContextOptions, type Page } from '@playwright/test';
 
 /**
@@ -136,7 +137,10 @@ test('manager plans and publishes a shift; employee sees it, clocks in/out; HR e
   await hr.page.waitForLoadState('networkidle');
   await shot(hr.page, '09-t13');
   const [download] = await Promise.all([hr.page.waitForEvent('download'), hr.page.getByRole('button', { name: 'Выгрузить Т-13' }).click()]);
-  expect(download.suggestedFilename()).toMatch(/\.xlsx$/);
+  // Headless Chromium may report a generic suggested name; verify the payload is an xlsx (zip) instead.
+  const file = await download.path();
+  const head = readFileSync(file).subarray(0, 2).toString('latin1');
+  expect(head).toBe('PK');
   await expect(hr.page.getByText(/скачан/)).toBeVisible();
   await hr.context.close();
 });

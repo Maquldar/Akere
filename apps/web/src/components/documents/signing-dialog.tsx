@@ -71,7 +71,8 @@ export function SigningDialog({
   const cancel = useCancelSigningSession();
   const polling = step === 'qr' && session?.status === 'PENDING';
   const live = useSigningSession(step === 'qr' ? (session?.id ?? null) : null, { poll: polling });
-  const current = live.data ?? session;
+  // GET /signing/sessions/:id does not repeat the QR (only the create response carries it).
+  const current = live.data && session ? { ...live.data, qrDataUrl: session.qrDataUrl, qrUrl: session.qrUrl } : session;
   const countdown = useCountdown(current?.status === 'PENDING' ? current.expiresAt : undefined);
   const finished = useRef(false);
 

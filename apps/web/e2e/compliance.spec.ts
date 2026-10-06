@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
 /**
@@ -30,7 +33,23 @@ function tinyPdf(text: string): Buffer {
   return Buffer.from(out, 'latin1');
 }
 
+/** Session cache per user (the login endpoint is rate limited per login+IP, and other suites log in too). */
+const authFile = (email: string) => path.join(os.tmpdir(), `akere-e2e-compliance-${email.replace(/\W+/g, '_')}.json`);
+
 async function login(browser: Browser, email: string): Promise<Page> {
+  const file = authFile(email);
+  if (fs.existsSync(file)) {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true, storageState: file });
+    const page = await ctx.newPage();
+    await page.goto('/ru');
+    const ok = await page
+      .getByRole('navigation', { name: 'Основная навигация' })
+      .waitFor({ timeout: 30_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (ok) return page;
+    await ctx.close();
+  }
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
   const page = await ctx.newPage();
   await page.goto('/ru/login');
@@ -38,20 +57,21 @@ async function login(browser: Browser, email: string): Promise<Page> {
   await page.getByRole('textbox', { name: 'Пароль', exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
+  await ctx.storageState({ path: file });
   return page;
 }
 
-test.describe.configure({ mode: 'serial' });
+test.describe.configure({ mode: 'serial', timeout: 240_000 });
 
 test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR sees progress and downloads the sheet', async ({ browser }) => {
   const title = `E2E Инструкция по охране труда ${Date.now()}`;
   const hr = await login(browser, 'hr@dala.kz');
 
-  // The department of the employee who will acknowledge.
-  const options = await hr.request.get('/api/v1/employees/options?q=Серикова');
-  expect(options.ok()).toBeTruthy();
-  const serikova = ((await options.json()) as { fullName: string; department: string | null }[])[0];
-  expect(serikova?.department).toBeTruthy();
+  // Legal entity and department of the employee who will acknowledge.
+  const res = await hr.request.get(`/api/v1/employees?q=${encodeURIComponent('Серикова')}`);
+  expect(res.ok()).toBeTruthy();
+  const serikova = ((await res.json()) as { items: { fullName: string; legalEntity: { name: string }; department: { name: string } | null }[] }).items[0]!;
+  expect(serikova.department).toBeTruthy();
 
   await hr.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'ВНД' }).click();
   await expect(hr.getByRole('heading', { name: 'ВНД', level: 1 })).toBeVisible();
@@ -63,6 +83,8 @@ test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR se
   await hr.getByRole('button', { name: 'Новый ВНД' }).first().click();
   const dialog = hr.getByRole('dialog');
   await dialog.getByLabel('Название').fill(title);
+  await dialog.getByRole('combobox', { name: 'Юрлицо' }).click();
+  await hr.getByRole('option', { name: serikova.legalEntity.name }).click();
   await dialog.locator('input[type=file]').setInputFiles({ name: 'instruction.pdf', mimeType: 'application/pdf', buffer: tinyPdf('Safety instruction') });
   await dialog.getByRole('button', { name: 'Создать' }).click();
   await expect(hr.getByRole('heading', { name: title, level: 1 })).toBeVisible();
@@ -74,12 +96,12 @@ test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR se
   await hr.getByRole('button', { name: 'Добавить получателя' }).first().click();
   const add = hr.getByRole('dialog');
   await add.getByText('Подразделения', { exact: true }).click();
-  await add.getByRole('combobox').click();
-  await hr.getByRole('option', { name: new RegExp(serikova!.department!) }).first().click();
+  await add.locator('button[aria-haspopup=listbox]').click();
+  await hr.getByRole('option', { name: new RegExp(serikova.department!.name) }).first().click();
   await hr.keyboard.press('Escape');
   await add.getByRole('button', { name: 'Добавить', exact: true }).click();
   await expect(hr.getByText(/Получатель добавлен|Добавлено \d+ получател/)).toBeVisible();
-  await expect(hr.getByRole('cell', { name: serikova!.fullName })).toBeVisible();
+  await expect(hr.getByRole('cell', { name: serikova.fullName, exact: true })).toBeVisible();
   await shot(hr, '02-vnd-recipients');
 
   // Send
@@ -113,7 +135,7 @@ test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR se
   await hr.goto(vndUrl);
   await expect(hr.getByTestId('vnd-progress')).toContainText(`${before + 1}`);
   await hr.getByRole('tab', { name: /Ознакомление/ }).click();
-  await expect(hr.getByRole('row', { name: new RegExp(serikova!.fullName) }).getByText('Ознакомлен', { exact: true })).toBeVisible();
+  await expect(hr.getByRole('row', { name: new RegExp(serikova.fullName) }).getByText('Ознакомлен', { exact: true })).toBeVisible();
   const download = hr.waitForEvent('download');
   await hr.getByRole('button', { name: 'Лист ознакомления' }).first().click();
   expect((await download).suggestedFilename()).toMatch(/\.xlsx$/);

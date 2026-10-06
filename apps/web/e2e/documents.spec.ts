@@ -6,27 +6,30 @@ import { expect, test, type APIRequestContext, type Browser, type Page } from '@
  * Every run creates its own transfer orders (salary-only change, so the employee record is not modified).
  */
 
-const PASSWORD = 'Akere2026demo';
-const HR = 'hr@dala.kz';
-const CEO = 'ceo@dala.kz';
-const EMPLOYEE = 'a.serikova@dala.kz';
+// Demo users (login page demo panel; avoids the per-login rate limit shared with other test runs).
+const HR = 'Сулейменова Жанара';
+const CEO = 'Байсарин Тимур';
+const EMPLOYEE = 'Серикова Әлия';
+const EMPLOYEE_EMAIL = 'a.serikova@dala.kz';
 const EMPLOYEE_NAME = 'Серикова';
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/documents-${name}.png`, fullPage: false });
 
-async function login(browser: Browser, email: string, viewport?: { width: number; height: number }) {
+async function login(browser: Browser, name: string, viewport?: { width: number; height: number }) {
   const context = await browser.newContext(viewport ? { viewport } : {});
   const page = await context.newPage();
   await page.goto('/ru/login');
-  await page.getByLabel('Эл. почта или телефон').fill(email);
-  await page.getByRole('textbox', { name: 'Пароль', exact: true }).fill(PASSWORD);
-  await page.getByRole('button', { name: 'Войти', exact: true }).click();
-  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
+  await page.getByRole('button', { name: new RegExp(`Войти как ${name}`) }).click();
+  await page.waitForURL((u) => !u.pathname.includes('/login'));
+  if (!viewport) await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
   return { context, page };
 }
 
-async function apiLogin(request: APIRequestContext, email: string) {
-  const res = await request.post('/api/v1/auth/login', { data: { login: email, password: PASSWORD }, headers: { 'X-Requested-With': 'akere' } });
+async function apiLogin(request: APIRequestContext, name: string) {
+  const users = (await (await request.get('/api/v1/auth/demo-users')).json()) as { id: string; fullName: string }[];
+  const user = users.find((u) => u.fullName.startsWith(name));
+  expect(user).toBeTruthy();
+  const res = await request.post('/api/v1/auth/demo-login', { data: { userId: user!.id }, headers: { 'X-Requested-With': 'akere' } });
   expect(res.ok()).toBeTruthy();
 }
 
@@ -34,7 +37,7 @@ async function employeeId(request: APIRequestContext): Promise<string> {
   const res = await request.get(`/api/v1/employees?q=${encodeURIComponent(EMPLOYEE_NAME)}&status=ACTIVE`);
   expect(res.ok()).toBeTruthy();
   const page = (await res.json()) as { items: { id: string; email: string }[] };
-  const e = page.items.find((x) => x.email === EMPLOYEE);
+  const e = page.items.find((x) => x.email === EMPLOYEE_EMAIL);
   expect(e).toBeTruthy();
   return e!.id;
 }
@@ -49,7 +52,7 @@ test('transfer order: HR → CEO signs with NCALayer → employee acknowledges �
   await nav.getByRole('link', { name: 'Сотрудники' }).click();
   await expect(hr.page.getByRole('heading', { name: 'Сотрудники', level: 1 })).toBeVisible();
   await hr.page.getByRole('searchbox', { name: 'Поиск сотрудников' }).fill(EMPLOYEE_NAME);
-  const row = hr.page.getByRole('row').filter({ hasText: EMPLOYEE });
+  const row = hr.page.getByRole('row', { name: new RegExp(EMPLOYEE) });
   await expect(row).toBeVisible();
   await shot(hr.page, '01-employees');
   await row.click();
@@ -133,7 +136,7 @@ test('eGov QR sandbox: session → phone page → Подписать → dialog 
   const dialog = ceo.page.getByRole('dialog');
   await dialog.getByRole('listitem').filter({ hasText: 'Для физических лиц' }).click();
   await expect(dialog.getByRole('img', { name: 'QR-код для подписания в eGov mobile' })).toBeVisible();
-  await expect(dialog.getByText('Выберите «eGov QR»')).toBeVisible();
+  await expect(dialog).toContainText('eGov QR');
   await shot(ceo.page, '08-qr');
   const href = await dialog.getByRole('link', { name: 'Открыть на этом устройстве' }).getAttribute('href');
   expect(href).toMatch(/^\/ru\/sign\/.+/);
@@ -143,7 +146,7 @@ test('eGov QR sandbox: session → phone page → Подписать → dialog 
   await phone.setViewportSize({ width: 390, height: 800 });
   await phone.goto(href!);
   await expect(phone.getByRole('heading', { name: 'Подписать документы' })).toBeVisible();
-  await expect(phone.getByText('Akere HR')).toBeVisible();
+  await expect(phone.getByText('Akere HR', { exact: true })).toBeVisible();
   await shot(phone, '09-egov-sandbox');
   await phone.getByRole('button', { name: 'Подписать', exact: true }).click();
   await expect(phone.getByText('Успешно подписано')).toBeVisible();

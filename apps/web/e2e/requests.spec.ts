@@ -21,7 +21,8 @@ async function login(browser: Browser, email: string, viewport?: { width: number
   await page.getByLabel('Эл. почта или телефон').fill(email);
   await page.getByRole('textbox', { name: 'Пароль', exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Войти', exact: true }).click();
-  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
+  await page.waitForURL((u) => !u.pathname.includes('/login'), { waitUntil: 'commit' });
+  await expect(page.locator('#main')).toBeVisible();
   return { context, page };
 }
 
@@ -73,7 +74,7 @@ test('annual leave request: employee → manager → HR → order signing', asyn
 
   await emp.page.getByRole('tab', { name: 'Предпросмотр' }).click();
   await expect(emp.page.getByRole('heading', { name: 'Проверка' })).toBeVisible();
-  await expect(emp.page.locator('iframe')).toBeVisible();
+  await expect(emp.page.getByTestId('pdf-preview').locator('canvas').first()).toBeVisible();
   await shot(emp.page, '02-new-preview');
 
   await emp.page.getByRole('button', { name: 'Отправить', exact: true }).click();
@@ -100,7 +101,7 @@ test('annual leave request: employee → manager → HR → order signing', asyn
   // Employee sees ORDER_SIGNING with the order card.
   await emp.page.goto(requestUrl);
   await expect(emp.page.getByText('Подписание приказа').first()).toBeVisible();
-  await expect(emp.page.getByRole('heading', { name: 'Приказ' })).toBeVisible();
+  await expect(emp.page.getByRole('heading', { name: 'Приказ', exact: true })).toBeVisible();
   await shot(emp.page, '05-detail-order-signing');
 
   // Cleanup: cancel so the vacation balance is not consumed by test runs.
