@@ -164,6 +164,7 @@ test('vacation plan: employee submits → manager bulk approves', async ({ brows
   await mgr.page.getByRole('combobox', { name: 'Год планирования' }).click();
   await mgr.page.getByRole('option', { name: `${year} год` }).click();
   await mgr.page.getByRole('searchbox', { name: 'Поиск по ФИО' }).fill('Серикова');
+  await expect(mgr.page.locator('tbody tr')).toHaveCount(1);
   const row = mgr.page.locator('tr', { hasText: 'Серикова' }).first();
   await expect(row.getByText('На согласовании')).toBeVisible();
   await row.getByRole('checkbox').click();

@@ -115,7 +115,7 @@ export function GanttGrid({
               >
                 {t('employee')}
               </th>
-              <th className="w-[96px] border-b border-border px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">{t('planned')}</th>
+              <th className="w-[132px] min-w-[132px] border-b border-border px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">{t('planned')}</th>
               {months.map((m, i) => (
                 <th
                   key={i}
@@ -186,7 +186,7 @@ export function GanttGrid({
                       <span className="font-medium text-fg tabular">
                         {formatDays(r.planned, locale)}/{formatDays(r.entitlement, locale)}
                       </span>
-                      <PlanStatusPill status={r.status} variant="dot" />
+                      <PlanStatusPill status={r.status} variant="dot" className="whitespace-nowrap" />
                     </div>
                   </td>
                   <td colSpan={12} className="relative border-b border-border p-0">

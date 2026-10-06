@@ -375,13 +375,13 @@ export function VacationSchedulePage() {
               progress={campaign.totals.employees ? campaign.totals.approved / campaign.totals.employees : 0}
             />
           </div>
-          {me.employee && campaign.status !== 'DRAFT' && <MyPlanCard key={campaign.id} campaign={campaign} />}
+          {me.employee && campaign.status !== 'DRAFT' && <MyPlanCard key={`plan-${campaign.id}`} campaign={campaign} />}
           {campaign.status === 'DRAFT' && !manage ? (
             <Card>
               <EmptyState icon={<CalendarRange aria-hidden />} title={t('draftCampaign')} description={t('draftCampaignHint')} />
             </Card>
           ) : (
-            <CampaignGrid key={campaign.id} campaign={campaign} />
+            <CampaignGrid key={`grid-${campaign.id}`} campaign={campaign} />
           )}
         </>
       )}

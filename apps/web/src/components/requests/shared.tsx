@@ -54,10 +54,10 @@ export function RequestStatusPill({ status }: { status: RequestStatus }) {
   return <StatusPill tone={requestStatusTone[status] ?? 'gray'}>{t(status)}</StatusPill>;
 }
 
-export function PlanStatusPill({ status, variant }: { status: PlanStatus; variant?: 'pill' | 'dot' }) {
+export function PlanStatusPill({ status, variant, className }: { status: PlanStatus; variant?: 'pill' | 'dot'; className?: string }) {
   const t = useTranslations('vacation.planStatus');
   return (
-    <StatusPill tone={planStatusTone[status] ?? 'gray'} variant={variant}>
+    <StatusPill tone={planStatusTone[status] ?? 'gray'} variant={variant} className={className}>
       {t(status)}
     </StatusPill>
   );
