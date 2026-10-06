@@ -71,7 +71,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
   });
 
   app.get('/document-templates', async (req) => {
-    const u = requireUser(req, 'document.manage');
+    const u = requireUser(req, 'document.create');
     return (await prisma.documentTemplate.findMany({ where: { tenantId: u.tenantId }, orderBy: { name: 'asc' } })).map(templateOut);
   });
 
@@ -83,7 +83,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
   });
 
   app.get('/document-templates/:id', { schema: { params: idParam } }, async (req) => {
-    const u = requireUser(req, 'document.manage');
+    const u = requireUser(req, 'document.create');
     const t = await prisma.documentTemplate.findFirst({ where: { id: req.params.id, tenantId: u.tenantId } });
     if (!t) throw notFound('Template');
     return templateOut(t);
@@ -99,7 +99,7 @@ export default async function configRoutes(fastify: FastifyInstance) {
   });
 
   app.post('/document-templates/:id/preview', { schema: { params: idParam, body: TemplatePreviewInput } }, async (req, reply) => {
-    const u = requireUser(req, 'document.manage');
+    const u = requireUser(req, 'document.create');
     const t = await prisma.documentTemplate.findFirst({ where: { id: req.params.id, tenantId: u.tenantId } });
     if (!t) throw notFound('Template');
     const le = await prisma.legalEntity.findFirst({ where: { id: req.body.legalEntityId, tenantId: u.tenantId } });

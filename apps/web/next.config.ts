@@ -21,6 +21,7 @@ const csp = [
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
+  "frame-src 'self' blob:",
 ].join('; ');
 
 const securityHeaders = [

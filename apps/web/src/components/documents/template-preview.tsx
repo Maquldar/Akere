@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, ExternalLink, RefreshCw } from 'lucide-react';
+import { Download, ExternalLink, FileText, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -77,6 +77,15 @@ export function BlobPdfPane({
   className?: string;
 }) {
   const t = useTranslations('documents.pdf');
+  // Some deployments' CSP forbid framing blob: URLs; then offer open/download instead of a blank frame.
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    const onViolation = (e: SecurityPolicyViolationEvent) => {
+      if (e.blockedURI.startsWith('blob')) setBlocked(true);
+    };
+    document.addEventListener('securitypolicyviolation', onViolation);
+    return () => document.removeEventListener('securitypolicyviolation', onViolation);
+  }, []);
   return (
     <div className={cn('flex min-h-0 flex-col gap-3', className)}>
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -104,6 +113,17 @@ export function BlobPdfPane({
       <div className="relative min-h-[420px] flex-1 overflow-hidden rounded-xl border border-border bg-surface-muted">
         {error ? (
           <ErrorState error={error} onRetry={onRetry} compact />
+        ) : url && blocked ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+            <FileText className="size-8 text-fg-subtle" aria-hidden />
+            <p className="max-w-sm text-sm text-fg-muted">{t('blocked')}</p>
+            <Button variant="outline" size="sm" asChild>
+              <a href={url} target="_blank" rel="noopener">
+                <ExternalLink aria-hidden />
+                {t('open')}
+              </a>
+            </Button>
+          </div>
         ) : url ? (
           <iframe src={url} title={title} className="absolute inset-0 size-full" />
         ) : (

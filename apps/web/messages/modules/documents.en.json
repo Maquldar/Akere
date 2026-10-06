@@ -149,6 +149,7 @@
       "open": "Open",
       "download": "Download",
       "refresh": "Refresh",
+      "blocked": "The browser can't show the PDF inside the page. Open it in a new tab or download it.",
       "previewTitle": "Preview",
       "previewText": "This is how the document will look with the entered data."
     },

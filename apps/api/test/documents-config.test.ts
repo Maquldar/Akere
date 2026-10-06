@@ -45,7 +45,8 @@ describe('configuration endpoints', () => {
     const s = await docSetup(app);
     const vars = (await s.c.mgr.get('/document-templates/variables')).json();
     expect(vars.some((v: { key: string }) => v.key === 'employee.iin')).toBe(true);
-    expect((await s.c.mgr.get('/document-templates')).statusCode).toBe(403);
+    expect((await s.c.mgr.get('/document-templates')).statusCode).toBe(200); // managers read templates to fill documents
+    expect((await s.c.mgr.post('/document-templates', { name: 'x', body: [{ type: 'spacer' }] })).statusCode).toBe(403);
     const bad = await s.c.hr.post('/document-templates', { name: 'X', body: [{ type: 'unknown' }] });
     expect(bad.statusCode).toBe(400);
     const tpl = await s.c.hr.post('/document-templates', {
