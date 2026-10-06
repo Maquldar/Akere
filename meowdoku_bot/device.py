@@ -9,15 +9,36 @@ class AdbDevice:
     """Android phone or emulator (BlueStacks, LDPlayer) over ADB. Works on Windows."""
 
     def __init__(self, serial=None):
-        self.base = ["adb"] + (["-s", serial] if serial else [])
+        if serial and ":" in serial:
+            subprocess.run(["adb", "connect", serial], capture_output=True)
+        devices = self._devices()
+        if serial is None:
+            if len(devices) != 1:
+                raise SystemExit(
+                    f"adb sees {len(devices)} ready devices: {devices or 'none'}\n"
+                    "Run 'adb devices', then pass one with --serial, e.g. --serial 127.0.0.1:5555")
+            serial = devices[0]
+        elif serial not in devices:
+            raise SystemExit(f"device {serial} is not ready. 'adb devices' shows: {devices or 'none'}")
+        print(f"using adb device {serial}")
+        self.base = ["adb", "-s", serial]
+
+    @staticmethod
+    def _devices():
+        out = subprocess.run(["adb", "devices"], capture_output=True, text=True).stdout
+        return [l.split()[0] for l in out.splitlines()[1:] if l.strip().endswith("device")]
+
+    def _run(self, *args):
+        res = subprocess.run(self.base + list(args), capture_output=True)
+        if res.returncode != 0:
+            raise RuntimeError(f"adb {' '.join(args)} failed: {res.stderr.decode(errors='replace').strip()}")
+        return res.stdout
 
     def screenshot(self):
-        png = subprocess.run(self.base + ["exec-out", "screencap", "-p"],
-                             capture_output=True, check=True).stdout
-        return Image.open(io.BytesIO(png))
+        return Image.open(io.BytesIO(self._run("exec-out", "screencap", "-p")))
 
     def tap(self, x, y):
-        subprocess.run(self.base + ["shell", "input", "tap", str(x), str(y)], check=True)
+        self._run("shell", "input", "tap", str(x), str(y))
 
 
 class IosWdaDevice:
