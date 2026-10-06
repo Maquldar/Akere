@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Download, type Page } from '@playwright/test';
 
 /**
  * Phase 5 compliance UI: ВНД (create → recipients by department → send → employee acknowledges with NCALayer PIN →
@@ -59,6 +59,13 @@ async function login(browser: Browser, email: string): Promise<Page> {
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible({ timeout: 60_000 });
   await ctx.storageState({ path: file });
   return page;
+}
+
+/** The file is a real xlsx (zip). Headless Chromium reports non-ASCII download names as "download", so check content. */
+async function expectXlsx(download: Download) {
+  const file = await download.path();
+  const head = fs.readFileSync(file).subarray(0, 2).toString('latin1');
+  expect(head).toBe('PK');
 }
 
 test.describe.configure({ mode: 'serial', timeout: 240_000 });
@@ -144,7 +151,7 @@ test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR se
   await expect(hr.getByRole('row', { name: new RegExp(serikova.fullName) }).getByText('Ознакомлен', { exact: true })).toBeVisible();
   const download = hr.waitForEvent('download');
   await hr.getByRole('button', { name: 'Лист ознакомления' }).first().click();
-  expect((await download).suggestedFilename()).toMatch(/\.xlsx$/);
+  await expectXlsx(await download);
 
   // Mobile: employee list has no horizontal scroll at 360 px
   await emp.setViewportSize({ width: 360, height: 780 });
@@ -206,13 +213,25 @@ test('Reports, archive, help and support render', async ({ browser }) => {
   const download = hr.waitForEvent('download');
   await hr.getByRole('button', { name: 'Экспорт в Excel' }).click();
   await hr.getByRole('menuitem', { name: 'Движение персонала' }).click();
-  expect((await download).suggestedFilename()).toMatch(/\.xlsx$/);
+  await expectXlsx(await download);
 
   await hr.goto('/ru/archive');
   await expect(hr.getByRole('heading', { name: 'Электронный архив', level: 1 })).toBeVisible();
   await hr.locator('input[type=file]').setInputFiles({ name: 'old-order.pdf', mimeType: 'application/pdf', buffer: tinyPdf('Archive') });
-  await expect(hr.getByRole('cell', { name: /old-order\.pdf/ })).toBeVisible();
+  await expect(hr.getByRole('cell', { name: /old-order\.pdf \d+/ })).toBeVisible();
+  await hr.getByRole('combobox', { name: 'Тип документа, строка 1' }).click();
+  await hr.getByRole('option').first().click();
+  const entity = hr.getByRole('combobox', { name: 'Юрлицо, строка 1' });
+  if ((await entity.innerText()).includes('Выберите')) {
+    await entity.click();
+    await hr.getByRole('option').first().click();
+  }
+  await hr.getByLabel('Название, строка 1').fill(`E2E архивный приказ ${Date.now()}`);
+  await hr.getByLabel('Дата регистрации, строка 1').fill('2019-03-15');
   await shot(hr, '09-archive');
+  await hr.getByRole('button', { name: 'Загрузить в архив' }).click();
+  await expect(hr.getByText('Загружено: 1')).toBeVisible();
+  await expect(hr.getByRole('link', { name: 'Открыть', exact: true })).toBeVisible();
 
   await hr.goto('/ru/help');
   await expect(hr.getByRole('heading', { name: 'База знаний', level: 1 })).toBeVisible();

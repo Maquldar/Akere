@@ -33,6 +33,8 @@ export function VndAcknowledgeDialog({ open, onOpenChange, vnd }: { open: boolea
   const nca = useSignWithNcaLayer();
   const [method, setMethod] = useState<Method>('egov');
   const [egovId, setEgovId] = useState<string | null>(null);
+  // GET /signing/sessions/:id does not repeat the QR, so keep the one from the create response.
+  const [egovQr, setEgovQr] = useState<{ dataUrl: string | null; url: string | null } | null>(null);
   const [ncaId, setNcaId] = useState<string | null>(null);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState<string | null>(null);
@@ -47,12 +49,15 @@ export function VndAcknowledgeDialog({ open, onOpenChange, vnd }: { open: boolea
     (sessionId?: string) => {
       if (finalized.current) return;
       finalized.current = true;
-      ack.mutate(sessionId, {
-        onSuccess: () => {
+      // mutateAsync: the dialog unmounts as soon as the detail query says "acknowledged",
+      // and per-call mutate() callbacks would then never run.
+      ack
+        .mutateAsync(sessionId)
+        .then(() => {
           toast.success(t('success'));
           onOpenChange(false);
-        },
-        onError: (e) => {
+        })
+        .catch((e: unknown) => {
           finalized.current = false;
           if (isApiError(e) && e.rule === 'ALREADY_ACKNOWLEDGED') {
             toast.success(t('success'));
@@ -60,8 +65,7 @@ export function VndAcknowledgeDialog({ open, onOpenChange, vnd }: { open: boolea
             return;
           }
           setError(isApiError(e) ? e.message : tc('error'));
-        },
-      });
+        });
     },
     [ack, onOpenChange, t, tc],
   );
@@ -73,7 +77,10 @@ export function VndAcknowledgeDialog({ open, onOpenChange, vnd }: { open: boolea
     createSession.mutate(
       { documentIds: [vnd.id], method: 'EGOV_MOBILE' },
       {
-        onSuccess: (s) => setEgovId(s.id),
+        onSuccess: (s) => {
+          setEgovId(s.id);
+          setEgovQr({ dataUrl: s.qrDataUrl, url: s.qrUrl });
+        },
         onError: (e) => {
           egovRequested.current = false;
           setError(isApiError(e) ? e.message : tc('error'));
@@ -137,7 +144,7 @@ export function VndAcknowledgeDialog({ open, onOpenChange, vnd }: { open: boolea
 
   const busy = ack.isPending;
   const egovStatus = egov.data?.status;
-  const session = egov.data ?? (createSession.data?.id === egovId ? createSession.data : undefined);
+  const session = egovId && egovQr ? { status: egov.data?.status ?? 'PENDING', qrDataUrl: egovQr.dataUrl, qrUrl: egovQr.url } : undefined;
 
   return (
     <Dialog
