@@ -774,6 +774,8 @@ model Document {
   @@index([subjectEmployeeId])
   @@index([authorId])
   @@index([documentTypeId])
+  @@index([pdfFileId])
+  @@index([signedPdfFileId])
 }
 
 model DocumentFile {
@@ -801,6 +803,7 @@ model FileVersion {
   storedFile   StoredFile   @relation(fields: [storedFileId], references: [id])
 
   @@unique([documentFileId, version])
+  @@index([storedFileId])
 }
 
 model RouteStep {
@@ -822,6 +825,7 @@ model RouteStep {
 
   @@index([documentId, order])
   @@index([assigneeUserId, status])
+  @@index([actedById])
 }
 
 model Signature {
@@ -954,6 +958,7 @@ model Request {
 
   @@index([tenantId, status])
   @@index([employeeId])
+  @@index([attachmentFileIds], type: Gin)
 }
 
 model Absence {
@@ -1074,6 +1079,7 @@ model SickLeave {
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, startDate])
+  @@index([fileId])
 }
 
 // ───────────────────────────── Time tracking ─────────────────────────────
@@ -1154,6 +1160,7 @@ model TimeMark {
 
   @@index([employeeId, at])
   @@index([tenantId, at])
+  @@index([selfieFileId])
 }
 
 model TimeRequest {

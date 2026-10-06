@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import ExcelJS from 'exceljs';
 import { prisma } from '../src/lib/db';
+import { DEFAULT_TZ, todayLocal } from '../src/lib/calendar';
 import { ensureDocumentType } from '../src/modules/documents/defaults';
 import { Client, createApp, makeTenant, resetDb, type TestApp } from './helpers';
 
@@ -55,7 +56,7 @@ async function fixture() {
       { tenantId: t.tenantId, legalEntityId: le2.id, lastName: 'Г', firstName: 'Г', status: 'NEW' },
     ],
   });
-  const today = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+  const today = new Date(todayLocal(DEFAULT_TZ) + 'T00:00:00Z'); // the dashboard uses the tenant's local date
   await prisma.absence.createMany({
     data: [
       { tenantId: t.tenantId, employeeId: sub1.employeeId, kind: 'VACATION', startDate: new Date(today.getTime() - 2 * 86_400_000), endDate: new Date(today.getTime() + 5 * 86_400_000), source: 'MANUAL' },
