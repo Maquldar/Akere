@@ -3,3 +3,7 @@ export * from './validators';
 export * from './enums';
 export * from './schemas/auth';
 export * from './schemas/org';
+export * from './schemas/onboarding';
+export * from './schemas/documents';
+export * from './schemas/employees';
+export * from './schemas/time';
