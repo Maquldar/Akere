@@ -190,6 +190,8 @@ test('requests pages fit a 360px phone', async ({ browser }) => {
     expect(overflow, path).toBeLessThanOrEqual(0);
   }
   await emp.page.goto('/ru/requests/new?type=ANNUAL_LEAVE');
+  await expect(emp.page.getByRole('heading', { name: 'Новая заявка', level: 1 })).toBeVisible();
+  await expect(emp.page.getByText('Накоплено дней отпуска')).toBeVisible();
   await shot(emp.page, '09-mobile-new');
   await emp.context.close();
 });
