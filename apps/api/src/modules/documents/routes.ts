@@ -1,3 +1,4 @@
+import { emit } from '../../lib/hooks';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -198,6 +199,7 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       await tx.document.update({ where: { id: doc.id }, data: { status: 'CANCELLED', currentStepOrder: null } });
       await tx.documentComment.create({ data: { documentId: doc.id, authorId: u.userId, text: `Документ отменён: ${req.body.reason}` } });
       await audit(u, 'document.cancel', 'Document', doc.id, { reason: req.body.reason }, { ip: req.ip, tx });
+      await emit('document.cancelled', { tenantId: u.tenantId, documentId: doc.id }, tx);
     });
     return getDocumentDetail(u, doc.id);
   });

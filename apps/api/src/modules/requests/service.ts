@@ -378,6 +378,14 @@ export async function handleDocumentRejected(tx: Tx, documentId: string) {
   if (doc?.authorId !== r.employee.userId) await notifyEmployee(tx, r, 'Заявка отклонена', 'приказ отклонён');
 }
 
+/** A cancelled application or order (from the documents module) cancels the request. */
+export async function handleDocumentCancelled(tx: Tx, documentId: string) {
+  const r = await requestByDoc(tx, documentId);
+  if (!r || TERMINAL.includes(r.status)) return;
+  await tx.request.update({ where: { id: r.id }, data: { status: 'CANCELLED' } });
+  await audit({ tenantId: r.tenantId }, 'request.cancelled', 'Request', r.id, { documentId }, { tx });
+}
+
 export async function handleDocumentReturned(tx: Tx, documentId: string) {
   const r = await requestByDoc(tx, documentId);
   if (!r || r.applicationDocumentId !== documentId || r.status !== 'IN_APPROVAL') return;

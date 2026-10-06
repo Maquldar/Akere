@@ -3,11 +3,12 @@ import { on } from '../../lib/hooks';
 import { registerFileAccess } from '../../lib/files';
 import { registerInboxCounter } from '../me/routes';
 import { inTx } from '../documents/route-engine';
-import { canReadRequest, handleDocumentCompleted, handleDocumentRejected, handleDocumentReturned, pendingApprovalCount } from './service';
+import { canReadRequest, handleDocumentCompleted, handleDocumentRejected, handleDocumentReturned, handleDocumentCancelled, pendingApprovalCount } from './service';
 
 /** Request state machine driven by the route engine (runs inside the engine's transaction). */
 on('document.completed', async ({ documentId }, tx) => (tx ? handleDocumentCompleted(tx, documentId) : inTx((t) => handleDocumentCompleted(t, documentId))));
 on('document.rejected', async ({ documentId }, tx) => (tx ? handleDocumentRejected(tx, documentId) : inTx((t) => handleDocumentRejected(t, documentId))));
+on('document.cancelled', async ({ documentId }, tx) => (tx ? handleDocumentCancelled(tx, documentId) : inTx((t) => handleDocumentCancelled(t, documentId))));
 on('document.returned', async ({ documentId }, tx) => (tx ? handleDocumentReturned(tx, documentId) : inTx((t) => handleDocumentReturned(t, documentId))));
 
 /** Sidebar badge "Заявки": applications waiting for my approval. */

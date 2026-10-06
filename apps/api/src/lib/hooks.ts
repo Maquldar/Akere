@@ -9,6 +9,7 @@ export type DomainEvents = {
   'document.completed': { tenantId: string; documentId: string };
   'document.rejected': { tenantId: string; documentId: string };
   'document.returned': { tenantId: string; documentId: string };
+  'document.cancelled': { tenantId: string; documentId: string };
 };
 
 type Handler<K extends keyof DomainEvents> = (payload: DomainEvents[K], tx?: Tx) => Promise<void>;
