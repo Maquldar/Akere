@@ -96,9 +96,9 @@ export const navSections: NavSection[] = [
   {
     key: 'absences',
     items: [
-      { key: 'myAbsences', href: '/absences', icon: CalendarDays, phase: 4, ready: false, visible: (c) => can(c, 'request.create') },
+      { key: 'myAbsences', href: '/absences', icon: CalendarDays, phase: 4, ready: true, visible: (c) => can(c, 'request.create'), exact: true },
       { key: 'vacationSchedule', href: '/vacation-schedule', icon: CalendarRange, phase: 4, ready: true, visible: (c) => can(c, 'vacation.read') },
-      { key: 'sickLeaves', href: '/sick-leaves', icon: Stethoscope, phase: 5, ready: false, visible: (c) => can(c, 'sickleave.read') && staffWithTeam(c) },
+      { key: 'sickLeaves', href: '/absences/sick-leaves', icon: Stethoscope, phase: 5, ready: true, visible: (c) => can(c, 'sickleave.read') && staffWithTeam(c) },
     ],
   },
   {
@@ -111,9 +111,9 @@ export const navSections: NavSection[] = [
   {
     key: 'time',
     items: [
-      { key: 'myTime', href: '/time', icon: Clock, phase: 6, ready: false, visible: (c) => can(c, 'time.self'), exact: true },
-      { key: 'planning', href: '/time/planning', icon: LayoutGrid, phase: 6, ready: false, visible: (c) => can(c, 'time.manage') },
-      { key: 'timesheet', href: '/time/timesheet', icon: Table2, phase: 6, ready: false, visible: (c) => can(c, 'time.manage'), badge: 'inbox.timeRequests' },
+      { key: 'myTime', href: '/time', icon: Clock, phase: 6, ready: true, visible: (c) => can(c, 'time.self'), exact: true },
+      { key: 'planning', href: '/time/planning', icon: LayoutGrid, phase: 6, ready: true, visible: (c) => can(c, 'time.manage') },
+      { key: 'timesheet', href: '/time/timesheet', icon: Table2, phase: 6, ready: true, visible: (c) => can(c, 'time.manage'), badge: 'inbox.timeRequests' },
     ],
   },
   {
