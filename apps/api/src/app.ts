@@ -1,4 +1,4 @@
-import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyError, type FastifyInstance, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
@@ -16,6 +16,14 @@ export type App = FastifyInstance;
 
 /** Trust the nearest `n` proxies (proxy-addr hop index 0 = the socket peer). */
 const hops = (n: number) => (_addr: string, i: number) => i < n;
+
+/** Global rate-limit key: the signed-in user / candidate when the session cookie resolved, otherwise the client IP. */
+export function rateLimitKey(req: FastifyRequest): string {
+  const a = req.auth;
+  if (a?.kind === 'user') return `user:${a.userId}`;
+  if (a?.kind === 'candidate') return `candidate:${a.candidateId}`;
+  return `ip:${req.ip}`;
+}
 
 function zodDetails(issues: { path: PropertyKey[]; message: string }[]) {
   const fieldErrors: Record<string, string[]> = {};
@@ -46,6 +54,11 @@ export async function buildApp(opts: { logger?: boolean } = {}) {
     global: true,
     max: 300,
     timeWindow: '1 minute',
+    // Authenticated traffic is limited per account, anonymous traffic per client IP. The web app reaches the API through
+    // the Next.js rewrite, so with TRUST_PROXY unset every browser shares the web server's socket address: an IP key
+    // would make the whole company share one 300/min bucket. The limiter's route-level onRequest hook runs after the
+    // global onRequest hook below, so req.auth is already resolved (a verified session, not a client-chosen value).
+    keyGenerator: (req) => rateLimitKey(req),
     errorResponseBuilder: (_req, ctx) => {
       const err = new AppError(429, 'RATE_LIMITED', 'Too many requests, try again later', { retryAfterSec: Math.ceil(ctx.ttl / 1000) });
       return err;

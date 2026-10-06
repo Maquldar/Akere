@@ -458,3 +458,34 @@ describe('P3 / L1 documents', () => {
     await expect(prisma.document.update({ where: { id: b.id }, data: { number: '777-о' } }).then(() => prisma.document.update({ where: { id: a.id }, data: { number: '777-о' } }))).rejects.toThrow();
   });
 });
+
+describe('global rate limit behind the web proxy (QA regression)', () => {
+  it('is per signed-in account, not per shared proxy IP; anonymous traffic stays per IP', async () => {
+    const t = await makeTenant();
+    await t.person({ email: 'busy@t.kz' });
+    await t.person({ email: 'calm@t.kz' });
+    const a = await createApp(); // fresh limiter store; every inject comes from the same socket address (like the Next.js rewrite)
+    try {
+      const busy = new Client(a);
+      const calm = new Client(a);
+      await busy.login('busy@t.kz');
+      await calm.login('calm@t.kz');
+      const codes = [];
+      for (let i = 0; i < 301; i++) codes.push((await busy.get('/auth/me')).statusCode);
+      expect(codes.slice(0, 300).every((x) => x === 200)).toBe(true);
+      expect(codes[300]).toBe(429); // the per-account limit still applies
+      expect((await calm.get('/auth/me')).statusCode).toBe(200); // another user behind the same IP is not throttled
+      // Anonymous requests (and invalid cookies) share the per-IP bucket.
+      const anon = new Client(a);
+      const forged = new Client(a);
+      forged.cookie = 'akere_session=forged-token';
+      let last = 0;
+      for (let i = 0; i < 300; i++) last = (await (i % 2 ? anon : forged).get('/auth/me')).statusCode;
+      expect(last).toBe(401);
+      expect((await anon.get('/auth/me')).statusCode).toBe(429);
+      expect((await calm.get('/auth/me')).statusCode).toBe(200);
+    } finally {
+      await a.close();
+    }
+  }, 60_000);
+});

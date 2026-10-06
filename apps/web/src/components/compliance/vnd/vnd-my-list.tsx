@@ -25,7 +25,7 @@ export function VndMyList() {
   const pendingCount = (all.data ?? []).filter((v) => v.myStatus === 'PENDING').length;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
         <TabsList aria-label={t('filterLabel')}>
           <TabsTrigger value="all">{t('all')}</TabsTrigger>
@@ -37,7 +37,7 @@ export function VndMyList() {
       </Tabs>
 
       {list.isLoading ? (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {Array.from({ length: 3 }, (_, i) => (
             <Card key={i} className="p-4">
               <Skeleton className="h-4 w-1/2" />
@@ -58,7 +58,7 @@ export function VndMyList() {
           />
         </Card>
       ) : (
-        <ul className="grid gap-3" aria-label={t('listLabel')}>
+        <ul className="grid grid-cols-1 gap-3" aria-label={t('listLabel')}>
           {list.data.map((v) => {
             const pending = v.myStatus === 'PENDING' && v.status === 'IN_ROUTE';
             return (

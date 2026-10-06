@@ -589,3 +589,4 @@ Public endpoints (rate limited 60 req/min per key):
 - Attachments (`fileId` on sick leaves, `attachmentFileIds` on requests) must be the caller's own unreferenced uploads from `POST /uploads`.
 - Outbox: one-time codes are redacted (`[скрыто: одноразовый код]`) when a real provider delivers them; kept only in sandbox/demo mode where the outbox is the delivery channel.
 - Env `TRUST_PROXY` (default `false`; `1` behind one reverse proxy, or a CIDR list) controls which client IP rate limits see. Never expose the API port directly when it is set.
+- Global rate limit (300 req/min) is keyed by the signed-in account (user or candidate session) and falls back to the client IP for anonymous requests, so users behind the web proxy / one office NAT no longer share a bucket. Credential endpoints keep their own login+IP limiter.

@@ -15,7 +15,7 @@ const HR = 'hr@dala.kz';
 const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/requests-${name}.png`, fullPage: false });
 
 type StorageState = Awaited<ReturnType<import('@playwright/test').BrowserContext['storageState']>>;
-/** Sessions are reused across tests: the API rate-limits logins (5 / 15 min per login + IP). */
+/** Sessions are reused across tests: the API rate-limits logins (20 / 15 min per login + IP). */
 const sessions = new Map<string, StorageState>();
 
 async function login(browser: Browser, email: string, viewport?: { width: number; height: number }) {
@@ -62,9 +62,30 @@ async function approveOnRequestPage(page: Page, url: string) {
   await expect(page.getByText(/Ваше согласование/)).toBeHidden();
 }
 
-test('annual leave request: employee → manager → HR → order signing', async ({ browser }) => {
+/**
+ * Cancels open annual-leave requests left in the test window (2027–2028) by an interrupted earlier run, so they do not
+ * keep reserving the employee's vacation balance (the seed has no requests in that window).
+ */
+async function cancelLeftoverRequests(request: APIRequestContext) {
+  await apiLogin(request, EMPLOYEE);
+  for (const status of ['DRAFT', 'IN_APPROVAL', 'REWORK', 'ORDER_SIGNING']) {
+    const res = await request.get(`/api/v1/requests?scope=mine&status=${status}&pageSize=100`);
+    expect(res.ok()).toBeTruthy();
+    const page = (await res.json()) as { items: { id: string; type: { code: string }; startDate: string | null }[] };
+    for (const r of page.items) {
+      if (r.type.code !== 'ANNUAL_LEAVE' || !r.startDate || r.startDate < '2027-01-04') continue;
+      const cancel = await request.post(`/api/v1/requests/${r.id}/cancel`, { headers: { 'X-Requested-With': 'akere' } });
+      expect(cancel.ok()).toBeTruthy();
+    }
+  }
+}
+
+test('annual leave request: employee → manager → HR → order signing', async ({ browser, playwright, baseURL }) => {
   test.setTimeout(240_000);
   const { start, end } = randomPeriod();
+  const empApi = await playwright.request.newContext({ baseURL });
+  await cancelLeftoverRequests(empApi);
+  await empApi.dispose();
 
   // Employee files the request.
   const emp = await login(browser, EMPLOYEE);
