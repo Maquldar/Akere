@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from bot import find_orange_button, is_dimmed
+from bot import find_orange_button, find_tap_to_continue, is_dimmed
 from solver import solve
 from vision import read_board
 
@@ -24,7 +24,11 @@ def test_screens():
     assert is_dimmed(win) and find_orange_button(win)
     home = Image.open(SAMPLES / "home.jpg")
     assert find_orange_button(home)
-    assert is_dimmed(Image.open(SAMPLES / "leaderboard.jpg"))
+    for name, text_y in [("leaderboard.jpg", 1142), ("leaderboard_emu.png", 1048)]:
+        lb = Image.open(SAMPLES / name)
+        assert is_dimmed(lb) and find_orange_button(lb) is None
+        x, y = find_tap_to_continue(lb)
+        assert abs(y - text_y) < 25 and abs(x - lb.width // 2) < 60, (name, x, y)
 
 
 if __name__ == "__main__":

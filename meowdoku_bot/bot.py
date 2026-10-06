@@ -36,6 +36,20 @@ def find_orange_button(img):
     return int(np.median(xs)), int(np.median(ys))
 
 
+def find_tap_to_continue(img):
+    """Center of the yellow 'Tap to Continue' text: the lowest yellow thing on screen."""
+    a = np.asarray(img.convert("RGB")).astype(int)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    mask = (r > 200) & (g > 170) & (b < 140) & (r - b > 90)
+    mask[: img.height * 3 // 4] = False
+    rows = np.nonzero(mask.sum(axis=1) > img.width // 60)[0]
+    if len(rows) == 0:
+        return None
+    bottom = rows[-1]
+    ys, xs = np.nonzero(mask[bottom - img.height // 25: bottom + 1])
+    return int(np.median(xs)), int(bottom - img.height // 25 + np.median(ys))
+
+
 def play_level(dev, img):
     regions, centers = read_board(img)
     cats = solve(regions)
@@ -56,11 +70,11 @@ def step(dev):
             return True
         except (ValueError, IndexError):
             pass  # no board on screen
-    button = find_orange_button(img)
+    button = find_orange_button(img) or find_tap_to_continue(img)
     if button:
-        dev.tap(*button)                                 # Continue / Level N
+        dev.tap(*button)  # Continue / Level N / Tap to Continue
     else:
-        dev.tap(img.width // 2, int(img.height * 0.9))  # 'Tap to Continue'
+        dev.tap(img.width // 2, int(img.height * 0.95))
     return False
 
 
