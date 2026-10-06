@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../client';
+import { isApiError } from '../errors';
 import { qk } from '../query-keys';
 import type { Department, FileRef, Page, UserRef } from '../types';
 import type {
@@ -60,7 +61,7 @@ export function useRequest(id: string) {
   return useQuery({
     queryKey: rqk.detail(id),
     queryFn: ({ signal }) => apiFetch<RequestDetail>(`/requests/${id}`, { signal }),
-    retry: (count, e) => count < 2 && !((e as { status?: number }).status && [403, 404].includes((e as { status: number }).status)),
+    retry: (count, e) => count < 2 && !(isApiError(e) && [403, 404].includes(e.status)),
   });
 }
 

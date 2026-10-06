@@ -340,8 +340,9 @@ export async function acknowledgeVnd(u: UserCtx, docId: string, signingSessionId
   await syncAcknowledgments(prisma, { documentId: doc.id });
   const r = await prisma.vndRecipient.findUnique({ where: { documentId_employeeId: { documentId: doc.id, employeeId: u.employeeId } } });
   if (!r || doc.status === 'DRAFT') throw notFound('Recipient');
-  if (r.status === 'ACKNOWLEDGED') throw conflict('You have already acknowledged this document', { rule: 'ALREADY_ACKNOWLEDGED' });
-  if (doc.status !== 'IN_ROUTE') throw conflict('The ВНД is not awaiting acknowledgment', { rule: 'INVALID_STATUS' });
+  // Confirming a signing session is idempotent: the signature may already have been mirrored (e.g. by the completion hook).
+  if (r.status === 'ACKNOWLEDGED' && !signingSessionId) throw conflict('You have already acknowledged this document', { rule: 'ALREADY_ACKNOWLEDGED' });
+  if (r.status === 'PENDING' && doc.status !== 'IN_ROUTE') throw conflict('The ВНД is not awaiting acknowledgment', { rule: 'INVALID_STATUS' });
 
   if (signingSessionId) {
     const session = await prisma.signingSession.findFirst({ where: { id: signingSessionId, userId: u.userId, tenantId: u.tenantId } });

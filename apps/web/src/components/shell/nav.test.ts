@@ -11,7 +11,8 @@ describe('nav', () => {
   it('shows admin items only to admins and only when ready', () => {
     const admin = visibleSections(accessContext(me(['org.manage', 'users.manage', 'audit.read', 'apikey.manage'], ['ADMIN'])));
     const adminSection = admin.find((s) => s.key === 'admin');
-    expect(adminSection?.items.map((i) => i.key)).toEqual(['orgStructure', 'users', 'audit', 'outbox']);
+    expect(adminSection?.items.map((i) => i.key)).toEqual(expect.arrayContaining(['orgStructure', 'users', 'audit', 'outbox', 'apiKeys']));
+    expect(adminSection?.items.every((i) => i.ready)).toBe(true);
 
     const employee = visibleSections(accessContext(me(['org.read', 'document.read', 'time.self'], ['EMPLOYEE'])));
     expect(employee.find((s) => s.key === 'admin')).toBeUndefined();

@@ -3,13 +3,15 @@ import { seedOrg } from './org';
 import { seedDocuments } from './documents';
 import { seedCandidates } from './candidates';
 import { seedTime } from './time';
+import { seedRequests } from './requests';
+import { seedP5 } from './p5';
 
 const prisma = new PrismaClient();
 
 /** Seeders run in order; each receives the context produced by the previous ones. Later phases append here. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Seeder = (prisma: PrismaClient, ctx: any) => Promise<object>;
-const seeders: Seeder[] = [seedOrg, seedDocuments, seedCandidates, seedTime];
+const seeders: Seeder[] = [seedOrg, seedDocuments, seedCandidates, seedRequests, seedTime, seedP5];
 
 async function truncateAll() {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`

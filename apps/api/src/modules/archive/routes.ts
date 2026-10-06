@@ -22,7 +22,7 @@ const message = (e: unknown) => {
   return 'Unexpected error while saving the document';
 };
 
-async function createArchiveDocument(u: UserCtx, item: ArchiveItemT, file: UploadedPart): Promise<string> {
+export async function createArchiveDocument(u: UserCtx, item: ArchiveItemT, file: UploadedPart): Promise<string> {
   const registeredAt = fromDateStr(item.registeredAt);
   if (registeredAt > todayUtc()) throw badRequest('Registration date cannot be in the future');
   const type = await prisma.documentType.findFirst({ where: { id: item.documentTypeId, tenantId: u.tenantId } });

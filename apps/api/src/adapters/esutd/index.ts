@@ -46,7 +46,7 @@ export function setEsutdSandboxFailure(rule: FailureRule | null) {
 }
 
 /** Validation the real ЕСУТД performs before accepting a contract registration. Returns RU messages. */
-export function validateEsutdPayload(p: Partial<EsutdPayload> & { employee?: Partial<EsutdPayload['employee']> | null }): string[] {
+export function validateEsutdPayload(p: Omit<Partial<EsutdPayload>, 'employee'> & { employee?: Partial<EsutdPayload['employee']> | null }): string[] {
   const errors: string[] = [];
   if (!p.employee) errors.push('не указан работник');
   else if (!p.employee.iin || !/^\d{12}$/.test(p.employee.iin)) errors.push('у работника не заполнен ИИН');

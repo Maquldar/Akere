@@ -73,31 +73,31 @@ export const navSections: NavSection[] = [
       { key: 'allDocuments', href: '/documents', icon: FileText, phase: 3, ready: false, visible: (c) => can(c, 'document.read'), exact: true },
       { key: 'outgoing', href: '/documents/outgoing', icon: Send, phase: 3, ready: false, visible: (c) => can(c, 'document.read') },
       { key: 'drafts', href: '/documents/drafts', icon: PencilLine, phase: 3, ready: false, visible: (c) => can(c, 'document.create') },
-      { key: 'vnd', href: '/vnd', icon: ScrollText, phase: 5, ready: false, visible: (c) => can(c, 'vnd.read'), badge: 'inbox.vnd' },
-      { key: 'esutd', href: '/esutd', icon: Landmark, phase: 5, ready: false, visible: (c) => can(c, 'esutd.read'), badge: 'esutd' },
-      { key: 'archive', href: '/archive', icon: Archive, phase: 5, ready: false, visible: (c) => can(c, 'document.manage') },
+      { key: 'vnd', href: '/vnd', icon: ScrollText, phase: 5, ready: true, visible: (c) => can(c, 'vnd.read'), badge: 'inbox.vnd' },
+      { key: 'esutd', href: '/esutd', icon: Landmark, phase: 5, ready: true, visible: (c) => can(c, 'esutd.read'), badge: 'esutd' },
+      { key: 'archive', href: '/archive', icon: Archive, phase: 5, ready: true, visible: (c) => can(c, 'document.manage') },
     ],
   },
   {
     key: 'requests',
     items: [
-      { key: 'myRequests', href: '/requests', icon: ClipboardList, phase: 4, ready: false, visible: (c) => can(c, 'request.create'), exact: true },
-      { key: 'teamRequests', href: '/requests/team', icon: ListChecks, phase: 4, ready: false, visible: (c) => can(c, 'request.read') && staffWithTeam(c), badge: 'inbox.requests' },
+      { key: 'myRequests', href: '/requests', icon: ClipboardList, phase: 4, ready: true, visible: (c) => can(c, 'request.create'), exact: true },
+      { key: 'teamRequests', href: '/requests/team', icon: ListChecks, phase: 4, ready: true, visible: (c) => can(c, 'request.read') && staffWithTeam(c), badge: 'inbox.requests' },
     ],
   },
   {
     key: 'candidates',
     items: [
-      { key: 'candidates', href: '/candidates', icon: UserRoundPlus, phase: 2, ready: false, visible: (c) => can(c, 'candidate.read'), exact: true },
-      { key: 'requestTemplates', href: '/candidates/request-templates', icon: FileStack, phase: 2, ready: false, visible: (c) => can(c, 'candidate.manage') },
-      { key: 'questionnaires', href: '/candidates/questionnaires', icon: NotebookTabs, phase: 2, ready: false, visible: (c) => can(c, 'candidate.manage') },
+      { key: 'candidates', href: '/candidates', icon: UserRoundPlus, phase: 2, ready: true, visible: (c) => can(c, 'candidate.read') },
+      { key: 'requestTemplates', href: '/onboarding/request-templates', icon: FileStack, phase: 2, ready: true, visible: (c) => can(c, 'candidate.manage') },
+      { key: 'questionnaires', href: '/onboarding/questionnaires', icon: NotebookTabs, phase: 2, ready: true, visible: (c) => can(c, 'candidate.manage') },
     ],
   },
   {
     key: 'absences',
     items: [
       { key: 'myAbsences', href: '/absences', icon: CalendarDays, phase: 4, ready: false, visible: (c) => can(c, 'request.create') },
-      { key: 'vacationSchedule', href: '/vacation-schedule', icon: CalendarRange, phase: 4, ready: false, visible: (c) => can(c, 'vacation.read') },
+      { key: 'vacationSchedule', href: '/vacation-schedule', icon: CalendarRange, phase: 4, ready: true, visible: (c) => can(c, 'vacation.read') },
       { key: 'sickLeaves', href: '/sick-leaves', icon: Stethoscope, phase: 5, ready: false, visible: (c) => can(c, 'sickleave.read') && staffWithTeam(c) },
     ],
   },
@@ -118,7 +118,7 @@ export const navSections: NavSection[] = [
   },
   {
     key: 'analytics',
-    items: [{ key: 'reports', href: '/reports', icon: BarChart3, phase: 5, ready: false, visible: (c) => can(c, 'report.read') }],
+    items: [{ key: 'reports', href: '/reports', icon: BarChart3, phase: 5, ready: true, visible: (c) => can(c, 'report.read') }],
   },
   {
     key: 'admin',
@@ -130,15 +130,15 @@ export const navSections: NavSection[] = [
       { key: 'routes', href: '/admin/routes', icon: Route, phase: 3, ready: false, visible: (c) => can(c, 'document.manage') },
       { key: 'audit', href: '/admin/audit', icon: ScrollText, phase: 1, ready: true, visible: (c) => can(c, 'audit.read') },
       { key: 'outbox', href: '/admin/outbox', icon: Mail, phase: 1, ready: true, visible: (c) => hasRole(c, 'ADMIN') },
-      { key: 'apiKeys', href: '/admin/api-keys', icon: KeyRound, phase: 5, ready: false, visible: (c) => can(c, 'apikey.manage') },
+      { key: 'apiKeys', href: '/admin/api-keys', icon: KeyRound, phase: 5, ready: true, visible: (c) => can(c, 'apikey.manage') },
     ],
   },
 ];
 
 /** Bottom block (above the language switcher and the user menu). */
 export const bottomItems: NavItem[] = [
-  { key: 'help', href: '/help', icon: BookOpen, phase: 5, ready: false, visible: always },
-  { key: 'support', href: '/support', icon: LifeBuoy, phase: 5, ready: false, visible: always },
+  { key: 'help', href: '/help', icon: BookOpen, phase: 5, ready: true, visible: always },
+  { key: 'support', href: '/support', icon: LifeBuoy, phase: 5, ready: true, visible: always },
   { key: 'profile', href: '/profile', icon: UserCircle, phase: 1, ready: true, visible: always },
 ];
 

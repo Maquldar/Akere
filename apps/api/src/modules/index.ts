@@ -17,6 +17,13 @@ import deputiesRoutes from './deputies/routes';
 import requestsRoutes from './requests/routes';
 import uploadsRoutes from './uploads/routes';
 import vacationScheduleRoutes from './vacation-schedule/routes';
+import vndRoutes from './vnd/routes';
+import esutdRoutes from './esutd/routes';
+import archiveRoutes from './archive/routes';
+import reportsRoutes from './reports/routes';
+import apiKeysRoutes from './api-keys/routes';
+import publicRoutes from './public/routes';
+import helpRoutes from './help/routes';
 
 /** Every module is a Fastify plugin. Later phases append here (one line per module). */
 export async function registerModules(app: FastifyInstance) {
@@ -38,4 +45,11 @@ export async function registerModules(app: FastifyInstance) {
   await app.register(requestsRoutes); // /request-types, /requests
   await app.register(uploadsRoutes); // /uploads
   await app.register(vacationScheduleRoutes, { prefix: '/vacation-schedule' });
+  await app.register(vndRoutes, { prefix: '/vnd' });
+  await app.register(esutdRoutes, { prefix: '/esutd' });
+  await app.register(archiveRoutes, { prefix: '/documents' }); // POST /documents/archive
+  await app.register(reportsRoutes, { prefix: '/reports' });
+  await app.register(apiKeysRoutes, { prefix: '/api-keys' });
+  await app.register(publicRoutes, { prefix: '/public' });
+  await app.register(helpRoutes, { prefix: '/help' });
 }

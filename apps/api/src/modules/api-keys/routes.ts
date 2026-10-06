@@ -25,7 +25,7 @@ export default async function apiKeysRoutes(fastify: FastifyInstance) {
       return created;
     });
     // The plaintext key is returned exactly once.
-    return reply.status(201).send({ id: row.id, key, ...toApiKeyView(row) });
+    return reply.status(201).send({ ...toApiKeyView(row), key });
   });
 
   app.delete('/:id', { schema: { params: z.object({ id }) } }, async (req, reply) => {
