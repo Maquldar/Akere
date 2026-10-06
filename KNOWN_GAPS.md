@@ -29,3 +29,11 @@ To go live, each item needs the credentials or accreditation listed. Nothing is 
 | "Адаптация" module | AS-12: only a sidebar label in M4, no requirements. |
 | Billing / licensing | AS-13: seat counts shown, no payments. |
 | Roaming with external EDMS, SAP/Bitrix24 connectors | Listed as tariff-dependent integrations in M2; the public API (F-50) is the integration point. |
+
+## Accepted risks / follow-ups
+
+| Item | Detail |
+|------|--------|
+| CSP allows `'unsafe-inline'` scripts | Required by Next.js inline bootstrap without nonces. Moving to a nonce-based CSP via middleware is a follow-up (security review L2). React escapes output and markdown is rendered without raw HTML, so no known XSS sink exists. |
+| Zip-bomb check trusts declared sizes | Candidate import checks the zip central directory (≤ 20 MB uncompressed, ≤ 1000 entries); the 2 MB upload cap is the backstop. |
+| Face verification | Sandbox only checks that the selfie is a valid image (see table above). |

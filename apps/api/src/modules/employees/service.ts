@@ -26,6 +26,14 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export async function getVacationBalance(employeeId: string, tx: Tx = prisma, at: Date = todayUtc()) {
   const emp = await tx.employee.findUniqueOrThrow({ where: { id: employeeId } });
   const ledger = await tx.vacationLedger.findMany({ where: { employeeId }, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }] });
+  return computeVacationBalance(emp, ledger, at);
+}
+
+type BalanceEmployee = { status: string; terminationDate: Date | null; hireDate: Date; vacationDaysPerYear: number };
+type LedgerRow = { id: string; type: string; days: Prisma.Decimal | number; date: Date; note: string | null };
+
+/** Pure balance computation (see getVacationBalance); `ledger` sorted newest first. */
+export function computeVacationBalance(emp: BalanceEmployee, ledger: LedgerRow[], at: Date = todayUtc()) {
   const end = emp.status === 'TERMINATED' && emp.terminationDate && emp.terminationDate < at ? emp.terminationDate : at;
   const months = fullMonthsBetween(emp.hireDate, end);
   const sum = (type: string) => ledger.filter((l) => l.type === type).reduce((s, l) => s + Number(l.days), 0);
@@ -40,6 +48,24 @@ export async function getVacationBalance(employeeId: string, tx: Tx = prisma, at
     perYear: emp.vacationDaysPerYear,
     entries: ledger.map((l) => ({ id: l.id, type: l.type, days: Number(l.days), date: toDateStr(l.date), note: l.note })),
   };
+}
+
+/** Balances of many employees with two queries (employees + ledgers). */
+export async function getVacationBalances(employeeIds: string[], tx: Tx = prisma, at: Date = todayUtc()) {
+  const out = new Map<string, ReturnType<typeof computeVacationBalance>>();
+  if (!employeeIds.length) return out;
+  const [emps, ledger] = await Promise.all([
+    tx.employee.findMany({ where: { id: { in: employeeIds } } }),
+    tx.vacationLedger.findMany({ where: { employeeId: { in: employeeIds } }, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }] }),
+  ]);
+  const byEmp = new Map<string, typeof ledger>();
+  for (const l of ledger) {
+    const list = byEmp.get(l.employeeId) ?? [];
+    list.push(l);
+    byEmp.set(l.employeeId, list);
+  }
+  for (const e of emps) out.set(e.id, computeVacationBalance(e, byEmp.get(e.id) ?? [], at));
+  return out;
 }
 
 // ───────────────────────── Views ─────────────────────────
@@ -72,6 +98,19 @@ export function toEmployeeListItem(e: EmployeeListRow) {
 
 // ───────────────────────── HR event effects (F-30) ─────────────────────────
 
+/** A manager must be another employee of the same tenant whose own manager chain does not lead back to the employee. */
+async function validManager(tx: Tx, emp: { id: string; tenantId: string }, managerId: string): Promise<boolean> {
+  if (managerId === emp.id) return false;
+  if (!(await tx.employee.count({ where: { id: managerId, tenantId: emp.tenantId } }))) return false;
+  const cycle = await tx.$queryRaw<{ id: string }[]>`
+    WITH RECURSIVE chain AS (
+      SELECT id, "managerId", 1 AS depth FROM "Employee" WHERE id = ${managerId}
+      UNION
+      SELECT e.id, e."managerId", c.depth + 1 FROM "Employee" e JOIN chain c ON e.id = c."managerId" WHERE c.depth < 100
+    ) SELECT id FROM chain WHERE id = ${emp.id} LIMIT 1`;
+  return cycle.length === 0;
+}
+
 /** Applies transfer/dismissal orders once their route completes (runs inside the route engine's transaction). */
 export async function applyHrEventDocument(documentId: string, tx: Tx = prisma) {
   const doc = await tx.document.findUnique({ where: { id: documentId }, include: { documentType: { select: { code: true } } } });
@@ -79,12 +118,33 @@ export async function applyHrEventDocument(documentId: string, tx: Tx = prisma) 
   const data = (doc.data ?? {}) as Record<string, unknown>;
   const str = (k: string) => (typeof data[k] === 'string' && data[k] ? (data[k] as string) : undefined);
   if (doc.documentType.code === 'TRANSFER_ORDER') {
+    const emp = await tx.employee.findUniqueOrThrow({ where: { id: doc.subjectEmployeeId }, select: { id: true, tenantId: true, legalEntityId: true } });
     const patch: Prisma.EmployeeUncheckedUpdateInput = {};
-    if (str('departmentId')) patch.departmentId = str('departmentId');
-    if (str('positionId')) patch.positionId = str('positionId');
-    if (str('managerId')) patch.managerId = str('managerId');
+    const skipped: string[] = [];
+    // Document.data is free-form JSON: every id is validated against the tenant before it touches the employee (M5).
+    const departmentId = str('departmentId');
+    if (departmentId) {
+      const ok = await tx.department.count({ where: { id: departmentId, tenantId: emp.tenantId, legalEntityId: emp.legalEntityId } });
+      if (ok) patch.departmentId = departmentId;
+      else skipped.push('departmentId');
+    }
+    const positionId = str('positionId');
+    if (positionId) {
+      if (await tx.position.count({ where: { id: positionId, tenantId: emp.tenantId } })) patch.positionId = positionId;
+      else skipped.push('positionId');
+    }
+    const managerId = str('managerId');
+    if (managerId) {
+      if (await validManager(tx, emp, managerId)) patch.managerId = managerId;
+      else skipped.push('managerId');
+    }
     if (Object.keys(patch).length) await tx.employee.update({ where: { id: doc.subjectEmployeeId }, data: patch });
-    await audit({ tenantId: doc.tenantId }, 'employee.transfer_applied', 'Employee', doc.subjectEmployeeId, { documentId, ...patch } as Prisma.InputJsonValue, { tx });
+    if (skipped.length) {
+      await tx.documentComment.create({
+        data: { documentId, authorId: doc.authorId, text: `Перевод применён частично: пропущены недопустимые поля (${skipped.join(', ')})` },
+      });
+    }
+    await audit({ tenantId: doc.tenantId }, 'employee.transfer_applied', 'Employee', doc.subjectEmployeeId, { documentId, ...patch, skipped } as Prisma.InputJsonValue, { tx });
   } else if (doc.documentType.code === 'DISMISSAL_ORDER') {
     const effective = str('effectiveDate');
     const emp = await tx.employee.update({

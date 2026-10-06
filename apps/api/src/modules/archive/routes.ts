@@ -57,12 +57,15 @@ export async function createArchiveDocument(u: UserCtx, item: ArchiveItemT, file
   }, { timeout: 60_000 });
 }
 
+/** Every scan is buffered in memory: one upload carries at most 20 files (M7). */
+const MAX_ARCHIVE_FILES = 20;
+
 export default async function archiveRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   app.post('/archive', async (req, reply) => {
     const u = requireUser(req, 'document.manage');
-    const { files, fields } = await readMultipart(req);
+    const { files, fields } = await readMultipart(req, { maxFiles: MAX_ARCHIVE_FILES });
     let raw: unknown;
     try {
       raw = JSON.parse(fields.meta ?? '');
@@ -70,7 +73,7 @@ export default async function archiveRoutes(fastify: FastifyInstance) {
       throw badRequest('Field "meta" must be a JSON array', { fieldErrors: { meta: ['Invalid JSON'] }, formErrors: [] });
     }
     if (!Array.isArray(raw) || raw.length === 0) throw badRequest('Field "meta" must be a non-empty JSON array', { fieldErrors: { meta: ['Expected an array'] }, formErrors: [] });
-    if (raw.length > 50) throw badRequest('At most 50 documents per upload', { fieldErrors: { meta: ['Too many items'] }, formErrors: [] });
+    if (raw.length > MAX_ARCHIVE_FILES) throw badRequest(`At most ${MAX_ARCHIVE_FILES} documents per upload`, { fieldErrors: { meta: ['Too many items'] }, formErrors: [] });
     const uploads = files.filter((f) => f.field === 'files' || f.field === 'files[]' || f.field === 'file');
 
     const documentIds: string[] = [];

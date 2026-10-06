@@ -3,11 +3,17 @@ import type { Candidate } from '@prisma/client';
 import { prisma } from '../../lib/db';
 import { optDateStr } from '../../lib/dates';
 import { fullName } from '../../lib/names';
-import { acceptedValues, personalData } from './service';
+import { acceptedValues, acceptedValuesMany, personalData } from './service';
+
+type ExportCandidate = Candidate & { legalEntity: { name: string; bin: string } };
+type Accepted = Awaited<ReturnType<typeof acceptedValues>>;
+
+/** Hard cap on one export (rows are built in memory). */
+export const MAX_EXPORT_ROWS = 1000;
 
 /** One record of the 1С export (F-13): ФИО, ИИН, DOB, gender, contacts, address, ID document, education, IBAN. */
-export async function exportRecord(c: Candidate & { legalEntity: { name: string; bin: string } }) {
-  const { values, photoFileId } = await acceptedValues(c.id);
+export function toExportRecord(c: ExportCandidate, accepted: Pick<Accepted, 'values' | 'photoFileId'>) {
+  const { values, photoFileId } = accepted;
   const p = personalData(values);
   return {
     id: c.id,
@@ -34,13 +40,19 @@ export async function exportRecord(c: Candidate & { legalEntity: { name: string;
     updatedAt: c.updatedAt.toISOString(),
   };
 }
-export type ExportRecord = Awaited<ReturnType<typeof exportRecord>>;
+export type ExportRecord = ReturnType<typeof toExportRecord>;
+
+/** Records for already-loaded candidates, keeping their order (2 queries total, no N+1). */
+export async function exportRecords(rows: ExportCandidate[]): Promise<ExportRecord[]> {
+  const accepted = await acceptedValuesMany(rows.map((r) => r.id));
+  return rows.map((r) => toExportRecord(r, accepted.get(r.id)!));
+}
 
 export async function buildRecords(ids: string[]) {
-  const rows = await prisma.candidate.findMany({ where: { id: { in: ids } }, include: { legalEntity: { select: { name: true, bin: true } } }, orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }] });
-  const out: ExportRecord[] = [];
-  for (const r of rows) out.push(await exportRecord(r));
-  return out;
+  const rows = await prisma.candidate.findMany({
+    where: { id: { in: ids } }, include: { legalEntity: { select: { name: true, bin: true } } }, orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }], take: MAX_EXPORT_ROWS,
+  });
+  return exportRecords(rows);
 }
 
 const xmlEsc = (s: string) => s.replace(/[<>&'"]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[ch]!);

@@ -306,7 +306,20 @@ type DocValues = Record<string, Record<string, unknown>>;
 const s = (v: unknown) => (v === undefined || v === null || v === '' ? null : String(v));
 
 export async function acceptedValues(candidateId: string): Promise<{ values: DocValues; photoFileId: string | null; request: RequestRow | null }> {
-  const r = await latestRequest(candidateId);
+  return valuesOf(await latestRequest(candidateId));
+}
+
+/** Batch variant of acceptedValues (one query for all candidates; latest request per candidate). */
+export async function acceptedValuesMany(candidateIds: string[]) {
+  const out = new Map<string, ReturnType<typeof valuesOf>>();
+  if (!candidateIds.length) return out;
+  const reqs = await prisma.documentRequest.findMany({ where: { candidateId: { in: candidateIds } }, orderBy: { createdAt: 'desc' }, include: requestInclude });
+  for (const r of reqs) if (!out.has(r.candidateId)) out.set(r.candidateId, valuesOf(r));
+  for (const id of candidateIds) if (!out.has(id)) out.set(id, valuesOf(null));
+  return out;
+}
+
+function valuesOf(r: RequestRow | null): { values: DocValues; photoFileId: string | null; request: RequestRow | null } {
   const values: DocValues = {};
   let photoFileId: string | null = null;
   for (const d of r?.documents ?? []) {

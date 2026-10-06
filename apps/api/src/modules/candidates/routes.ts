@@ -20,8 +20,8 @@ import {
   candidateInclude, candidateScope, docView, findCandidate, latestRequest, loadDetail, loadRequest, mergeValues, refreshDocStatus, requestInclude, requestView,
   sendToCandidate, toListItem, userRefs, validateCandidate,
 } from './service';
-import { buildImportTemplate, parseImport } from './import';
-import { buildRecords, toXlsx, toXml } from './export';
+import { MAX_IMPORT_BYTES, assertImportArchiveSize, buildImportTemplate, parseImport } from './import';
+import { MAX_EXPORT_ROWS, buildRecords, toXlsx, toXml } from './export';
 import { hireCandidate } from './hire';
 import { readFileWithFields, readSingleFile, saveDocFile } from './uploads';
 
@@ -111,11 +111,12 @@ export default async function candidatesRoutes(fastify: FastifyInstance) {
 
   app.post('/import', { schema: { querystring: z.object({ dryRun: boolQuery.optional() }) } }, async (req) => {
     const u = requireUser(req, 'candidate.manage');
-    const { file, fields } = await readFileWithFields(req);
+    const { file, fields } = await readFileWithFields(req, { maxFileBytes: MAX_IMPORT_BYTES });
     const legalEntityId = fields.legalEntityId;
     if (!legalEntityId) throw badRequest('legalEntityId is required', { fieldErrors: { legalEntityId: ['Required'] }, formErrors: [] });
     if (!file) throw badRequest('Multipart field "file" is required', { fieldErrors: { file: ['Required'] }, formErrors: [] });
     if ((await sniff(file.buffer, file.filename)) !== 'xlsx') throw new AppError(415, 'UNSUPPORTED_FILE', 'Upload the XLSX import template');
+    assertImportArchiveSize(file.buffer);
     if (!(await prisma.legalEntity.findFirst({ where: { id: legalEntityId, tenantId: u.tenantId } }))) throw notFound('Legal entity');
     if (!legalEntityAllowed(u, legalEntityId)) throw new AppError(403, 'FORBIDDEN', 'Legal entity is outside your scope');
 
@@ -369,7 +370,11 @@ export default async function candidatesRoutes(fastify: FastifyInstance) {
     const { candidateIds, format, markExported } = req.body;
     if (markExported) requireUser(req, 'candidate.manage');
     const where: Prisma.CandidateWhereInput = { AND: [candidateScope(u), candidateIds ? { id: { in: candidateIds } } : { status: 'ACCEPTED' }] };
-    const ids = (await prisma.candidate.findMany({ where, select: { id: true } })).map((x) => x.id);
+    // At most MAX_EXPORT_ROWS per export (records are built in memory); X-Export-Truncated tells the client to export again.
+    const found = (await prisma.candidate.findMany({ where, select: { id: true }, orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' }], take: MAX_EXPORT_ROWS + 1 })).map((x) => x.id);
+    const truncated = found.length > MAX_EXPORT_ROWS;
+    const ids = found.slice(0, MAX_EXPORT_ROWS);
+    if (truncated) reply.header('X-Export-Truncated', 'true');
     const records = await buildRecords(ids);
     let marked = 0;
     if (markExported && ids.length) {

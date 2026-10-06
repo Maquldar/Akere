@@ -20,6 +20,9 @@ import { fmtDue, notifyDoc } from './messages';
  *  - reject → REJECTED, remaining steps SKIPPED
  *  - deputies: an active Deputy of the assignee may act (actedById + Signature.onBehalfOfUserId record it);
  *    any HR whose grant covers the document's legal entity may act on a step assigned to another HR of that entity (ROLE_HR pool).
+ *    ACKNOWLEDGE steps are never delegated: only the assignee may acknowledge.
+ *  - concurrency: completeStep/returnDocument/rejectDocument lock the Document row first (SELECT … FOR UPDATE), so parallel
+ *    steps completed at the same time are serialized and the last one always sees the others DONE and advances the route.
  * All functions take a transaction client; callers wrap them in prisma.$transaction.
  */
 
@@ -198,15 +201,30 @@ export async function findActionableStep(
   if (!steps.length) return null;
   const own = steps.find((s) => s.assigneeUserId === user.userId);
   if (own) return { step: own, onBehalfOfUserId: null, via: 'SELF' };
+  // An acknowledgment (ВНД, "ознакомлен") is personal: only the assignee themself may give it — never a deputy or the HR pool.
+  const delegable = steps.filter((s) => s.action !== 'ACKNOWLEDGE');
+  if (!delegable.length) return null;
   const principals = user.principalIds ?? (await activePrincipalIds(user.userId, tx));
-  const dep = steps.find((s) => principals.includes(s.assigneeUserId));
+  const dep = delegable.find((s) => principals.includes(s.assigneeUserId));
   if (dep) return { step: dep, onBehalfOfUserId: dep.assigneeUserId, via: 'DEPUTY' };
   if (await hrCovers(tx, user.userId, doc.legalEntityId)) {
-    for (const s of steps) {
+    for (const s of delegable) {
       if (await hrCovers(tx, s.assigneeUserId, doc.legalEntityId)) return { step: s, onBehalfOfUserId: s.assigneeUserId, via: 'HR_POOL' };
     }
   }
   return null;
+}
+
+/** Serializes route transitions of one document (M2/M3). Must run inside the caller's transaction. */
+export async function lockDocument(tx: Tx, documentId: string) {
+  await tx.$queryRaw`SELECT id FROM "Document" WHERE id = ${documentId} FOR UPDATE`;
+}
+
+async function lockStepDocument(tx: Tx, stepId: string) {
+  const ref = await tx.routeStep.findUniqueOrThrow({ where: { id: stepId }, select: { documentId: true } });
+  await lockDocument(tx, ref.documentId);
+  // Re-read after the lock so the status reflects any transition committed while we waited.
+  return tx.routeStep.findUniqueOrThrow({ where: { id: stepId }, include: { document: true } });
 }
 
 /**
@@ -217,7 +235,8 @@ export async function completeStep(
   tx: Tx,
   opts: { stepId: string; actorUserId: string; onBehalfOfUserId?: string | null; comment?: string | null; method: SignMethod; signature?: SignatureResult | null },
 ): Promise<{ completed: boolean }> {
-  const step = await tx.routeStep.findUniqueOrThrow({ where: { id: opts.stepId }, include: { document: true } });
+  const step = await lockStepDocument(tx, opts.stepId);
+  if (step.document.status !== 'IN_ROUTE') throw conflict('This step has already been processed', { rule: 'STEP_NOT_PENDING' });
   const claimed = await tx.routeStep.updateMany({
     where: { id: step.id, status: 'PENDING' },
     data: { status: 'DONE', actedAt: new Date(), actedById: opts.actorUserId, comment: opts.comment ?? null },
@@ -259,10 +278,14 @@ export async function signAndComplete(
 
 /** Return for rework (→ REWORK). Steps reset to WAITING, signatures voided, author notified, `document.returned` fires. */
 export async function returnDocument(tx: Tx, opts: { stepId: string; actorUserId: string; comment: string }) {
-  const step = await tx.routeStep.findUniqueOrThrow({ where: { id: opts.stepId }, include: { document: true } });
-  if (step.status !== 'PENDING') throw conflict('This step has already been processed', { rule: 'STEP_NOT_PENDING' });
+  const step = await lockStepDocument(tx, opts.stepId);
+  if (step.status !== 'PENDING' || step.document.status !== 'IN_ROUTE') throw conflict('This step has already been processed', { rule: 'STEP_NOT_PENDING' });
   const doc = step.document;
-  await tx.routeStep.update({ where: { id: step.id }, data: { status: 'RETURNED', actedAt: new Date(), actedById: opts.actorUserId, comment: opts.comment } });
+  const claimed = await tx.routeStep.updateMany({
+    where: { id: step.id, status: 'PENDING' },
+    data: { status: 'RETURNED', actedAt: new Date(), actedById: opts.actorUserId, comment: opts.comment },
+  });
+  if (claimed.count === 0) throw conflict('This step has already been processed', { rule: 'STEP_NOT_PENDING' });
   await tx.routeStep.updateMany({
     where: { documentId: doc.id, id: { not: step.id } },
     data: { status: 'WAITING', actedAt: null, actedById: null, viewedAt: null, comment: null, reminderSentAt: null },
@@ -281,10 +304,14 @@ export async function returnDocument(tx: Tx, opts: { stepId: string; actorUserId
 
 /** Reject (→ REJECTED). Remaining steps SKIPPED, author notified, `document.rejected` fires. */
 export async function rejectDocument(tx: Tx, opts: { stepId: string; actorUserId: string; comment: string }) {
-  const step = await tx.routeStep.findUniqueOrThrow({ where: { id: opts.stepId }, include: { document: true } });
-  if (step.status !== 'PENDING') throw conflict('This step has already been processed', { rule: 'STEP_NOT_PENDING' });
+  const step = await lockStepDocument(tx, opts.stepId);
+  if (step.status !== 'PENDING' || step.document.status !== 'IN_ROUTE') throw conflict('This step has already been processed', { rule: 'STEP_NOT_PENDING' });
   const doc = step.document;
-  await tx.routeStep.update({ where: { id: step.id }, data: { status: 'REJECTED', actedAt: new Date(), actedById: opts.actorUserId, comment: opts.comment } });
+  const claimed = await tx.routeStep.updateMany({
+    where: { id: step.id, status: 'PENDING' },
+    data: { status: 'REJECTED', actedAt: new Date(), actedById: opts.actorUserId, comment: opts.comment },
+  });
+  if (claimed.count === 0) throw conflict('This step has already been processed', { rule: 'STEP_NOT_PENDING' });
   await tx.routeStep.updateMany({ where: { documentId: doc.id, status: { in: ['WAITING', 'PENDING'] } }, data: { status: 'SKIPPED' } });
   await tx.document.update({ where: { id: doc.id }, data: { status: 'REJECTED', currentStepOrder: null } });
   await tx.documentComment.create({ data: { documentId: doc.id, authorId: opts.actorUserId, text: `Отклонено: ${opts.comment}` } });

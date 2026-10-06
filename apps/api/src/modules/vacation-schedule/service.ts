@@ -9,7 +9,7 @@ import { employeeScope, managedEmployeeScope } from '../../lib/scope';
 import { toUserRef, userRefSelect } from '../../lib/names';
 import { fromDateStr, optDateStr, toDateStr, todayUtc } from '../../lib/dates';
 import { DEFAULT_TZ, addDaysStr, diffDays, todayLocal } from '../../lib/calendar';
-import { getVacationBalance } from '../employees/service';
+import { getVacationBalances } from '../employees/service';
 import { hrUsersFor } from '../documents/route-engine';
 import { fmtShort, leaveDays } from '../requests/days';
 
@@ -58,14 +58,20 @@ export async function notifyCampaignOpened(c: VacationCampaign, tx: Tx = prisma)
  * Rounded down to whole days, never negative.
  */
 export async function entitlementFor(employeeId: string, year: number, tx: Tx = prisma): Promise<number> {
+  return (await entitlementsFor([employeeId], year, tx)).get(employeeId) ?? 0;
+}
+
+/** entitlementFor for a page of employees (batched balance queries). */
+export async function entitlementsFor(employeeIds: string[], year: number, tx: Tx = prisma): Promise<Map<string, number>> {
   const today = todayUtc();
   const current = today.getUTCFullYear();
-  if (year > current) {
-    const bal = await getVacationBalance(employeeId, tx, today);
-    return Math.max(0, Math.floor(bal.available + bal.perYear * (year - current)));
+  const future = year > current;
+  const balances = await getVacationBalances(employeeIds, tx, future ? today : fromDateStr(`${year}-12-31`));
+  const out = new Map<string, number>();
+  for (const [id, bal] of balances) {
+    out.set(id, Math.max(0, Math.floor(future ? bal.available + bal.perYear * (year - current) : bal.available)));
   }
-  const bal = await getVacationBalance(employeeId, tx, fromDateStr(`${year}-12-31`));
-  return Math.max(0, Math.floor(bal.available));
+  return out;
 }
 
 // ───────────────────────── Plan rows ─────────────────────────
@@ -85,6 +91,7 @@ async function approvableIds(u: UserCtx, employeeIds: string[]): Promise<Set<str
 
 async function toRows(u: UserCtx, campaign: VacationCampaign, emps: EmpRow[]): Promise<PlanRow[]> {
   const approvable = await approvableIds(u, emps.map((e) => e.id));
+  const entitlements = await entitlementsFor(emps.map((e) => e.id), campaign.year);
   const out: PlanRow[] = [];
   for (const e of emps) {
     const plan = e.vacationPlans[0] ?? null;
@@ -92,7 +99,7 @@ async function toRows(u: UserCtx, campaign: VacationCampaign, emps: EmpRow[]): P
     out.push({
       employee: { ...toUserRef(e.user), employeeId: e.id },
       status: plan?.status ?? 'NONE',
-      entitlement: await entitlementFor(e.id, campaign.year),
+      entitlement: entitlements.get(e.id) ?? 0,
       planned: periods.reduce((s, p) => s + p.days, 0),
       periods,
       comment: plan?.comment ?? null,

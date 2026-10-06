@@ -60,7 +60,12 @@ export async function getManageableVnd(u: UserCtx, id: string, tx: Tx = prisma) 
 
 // ───────────── Acknowledgment sync ─────────────
 
-/** Mirrors DONE ACKNOWLEDGE steps into VndRecipient rows (status, acknowledgedAt, signatureId). */
+/**
+ * Mirrors DONE ACKNOWLEDGE steps into VndRecipient rows (status, acknowledgedAt, signatureId).
+ * Only personal acknowledgments count: the step must have been acted on by the assignee themself (no signature on
+ * behalf of someone else). The single exception is HR's "signed on paper" completion (method PAPER), where the
+ * uploaded scan carries the recipients' handwritten signatures.
+ */
 export async function syncAcknowledgments(tx: Tx, filter: { documentId?: string; tenantId?: string }): Promise<number> {
   if (filter.documentId) {
     return tx.$executeRaw`
@@ -69,7 +74,9 @@ export async function syncAcknowledgments(tx: Tx, filter: { documentId?: string;
       JOIN "Employee" e ON e."userId" = s."assigneeUserId"
       LEFT JOIN "Signature" sig ON sig."routeStepId" = s.id
       WHERE r."documentId" = ${filter.documentId} AND s."documentId" = r."documentId" AND e.id = r."employeeId"
-        AND s.action = 'ACKNOWLEDGE' AND s.status = 'DONE' AND r.status = 'PENDING'`;
+        AND s.action = 'ACKNOWLEDGE' AND s.status = 'DONE' AND r.status = 'PENDING'
+        AND (s."actedById" = s."assigneeUserId" OR sig.method = 'PAPER')
+        AND (sig."onBehalfOfUserId" IS NULL OR sig.method = 'PAPER')`;
   }
   return tx.$executeRaw`
     UPDATE "VndRecipient" r SET status = 'ACKNOWLEDGED', "acknowledgedAt" = s."actedAt", "signatureId" = sig.id
@@ -78,7 +85,9 @@ export async function syncAcknowledgments(tx: Tx, filter: { documentId?: string;
     JOIN "Employee" e ON e."userId" = s."assigneeUserId"
     LEFT JOIN "Signature" sig ON sig."routeStepId" = s.id
     WHERE d."tenantId" = ${filter.tenantId ?? ''} AND d.kind = 'VND' AND s."documentId" = r."documentId" AND e.id = r."employeeId"
-      AND s.action = 'ACKNOWLEDGE' AND s.status = 'DONE' AND r.status = 'PENDING'`;
+      AND s.action = 'ACKNOWLEDGE' AND s.status = 'DONE' AND r.status = 'PENDING'
+      AND (s."actedById" = s."assigneeUserId" OR sig.method = 'PAPER')
+      AND (sig."onBehalfOfUserId" IS NULL OR sig.method = 'PAPER')`;
 }
 
 // ───────────── Views ─────────────

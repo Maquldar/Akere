@@ -1,7 +1,11 @@
+import { Prisma } from '@prisma/client';
 import { prisma, type Tx } from '../../lib/db';
 import { conflict } from '../../lib/errors';
 import { todayUtc } from '../../lib/dates';
 import { fullName } from '../../lib/names';
+
+const isUniqueViolation = (e: unknown) =>
+  (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') || (e as { meta?: { code?: string } })?.meta?.code === '23505';
 
 /** Pattern tokens: {seq}, {MM}, {YY}, {YYYY}; everything else is literal (e.g. `{seq}-к/{YY}` → `12-к/26`). */
 export function formatNumber(pattern: string, seq: number, date: Date): string {
@@ -50,7 +54,13 @@ export async function registerNumber(
     }
     if (!number) throw conflict('Could not allocate a document number');
   }
-  await tx.document.update({ where: { id: doc.id }, data: { number, registeredAt, backdated } });
+  try {
+    await tx.document.update({ where: { id: doc.id }, data: { number, registeredAt, backdated } });
+  } catch (e) {
+    // Unique (legalEntityId, documentTypeId, number): a concurrent registration took the number between check and write.
+    if (isUniqueViolation(e)) throw conflict(`Number ${number} is already used for this document type`, { rule: 'NUMBER_TAKEN' });
+    throw e;
+  }
   await refreshSearchText(documentId, tx);
   return { number, registeredAt, backdated };
 }

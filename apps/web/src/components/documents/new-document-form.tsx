@@ -81,6 +81,7 @@ export function NewDocumentForm() {
     if (!typeId) e.type = tc('requiredField');
     if (!entityId) e.entity = tc('requiredField');
     if (mode === 'bulk' && subjects.length === 0) e.subjects = t('pickEmployees');
+    if (mode === 'bulk' && subjects.length > 50) e.subjects = t('bulkMax', { max: 50 });
     if (startRoute) {
       const data: Record<string, string> = {};
       for (const f of fields) if (!f.optional && !(values[f.key] ?? '').trim()) data[f.key] = tc('requiredField');
@@ -121,6 +122,7 @@ export function NewDocumentForm() {
         {
           onSuccess: (r) => {
             toast.success(t('bulkCreated', { count: r.documentIds.length }));
+            if (r.failed?.length) toast.warning(t('bulkFailed', { count: r.failed.length }));
             router.push(startRoute ? '/documents/outgoing' : '/documents/drafts');
           },
           onError,

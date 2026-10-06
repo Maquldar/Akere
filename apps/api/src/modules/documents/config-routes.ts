@@ -10,7 +10,7 @@ import { prisma } from '../../lib/db';
 import { requireUser } from '../../lib/auth';
 import { conflict, notFound } from '../../lib/errors';
 import { audit } from '../../lib/audit';
-import { legalEntityAllowed } from '../../lib/scope';
+import { canReadEmployee, legalEntityAllowed } from '../../lib/scope';
 import { TEMPLATE_VARIABLES, buildTemplateContext, renderTemplatePdf } from '../../lib/templates';
 
 const idParam = z.object({ id });
@@ -104,7 +104,11 @@ export default async function configRoutes(fastify: FastifyInstance) {
     if (!t) throw notFound('Template');
     const le = await prisma.legalEntity.findFirst({ where: { id: req.body.legalEntityId, tenantId: u.tenantId } });
     if (!le || !legalEntityAllowed(u, le.id)) throw notFound('Legal entity');
-    if (req.body.subjectEmployeeId && !(await prisma.employee.findFirst({ where: { id: req.body.subjectEmployeeId, tenantId: u.tenantId } }))) throw notFound('Employee');
+    if (req.body.subjectEmployeeId) {
+      // The preview renders the employee's personal data: same visibility as reading the employee (M6).
+      const emp = await prisma.employee.findFirst({ where: { id: req.body.subjectEmployeeId, tenantId: u.tenantId }, select: { legalEntityId: true } });
+      if (!emp || !(await canReadEmployee(u, req.body.subjectEmployeeId)) || !legalEntityAllowed(u, emp.legalEntityId)) throw notFound('Employee');
+    }
     const ctx = await buildTemplateContext({
       legalEntityId: le.id, subjectEmployeeId: req.body.subjectEmployeeId, authorUserId: u.userId,
       document: { title: t.name, createdAt: new Date() }, data: req.body.data,

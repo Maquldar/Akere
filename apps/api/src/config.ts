@@ -1,5 +1,18 @@
 import { z } from 'zod';
 
+/**
+ * TRUST_PROXY → Fastify `trustProxy`: 'false' (default; req.ip = socket address, X-Forwarded-For ignored),
+ * 'true' (trust every hop — only when the API is unreachable except through the proxy), a hop count (e.g. '1'),
+ * or a comma-separated list of trusted proxy IPs/CIDRs.
+ */
+export function parseTrustProxy(v: string | undefined): boolean | number | string[] {
+  const s = (v ?? '').trim();
+  if (!s || s === 'false' || s === '0') return false;
+  if (s === 'true') return true;
+  if (/^\d+$/.test(s)) return Number(s);
+  return s.split(',').map((x) => x.trim()).filter(Boolean);
+}
+
 const Env = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(4000),
@@ -22,6 +35,7 @@ const Env = z.object({
   SUPPORT_EMAIL: z.string().default('support@akere.local'),
   JOBS_ENABLED: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
   LOG_LEVEL: z.string().default('info'),
+  TRUST_PROXY: z.string().optional().transform(parseTrustProxy),
 });
 
 export type Config = z.infer<typeof Env>;

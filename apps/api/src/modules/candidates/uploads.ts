@@ -1,5 +1,6 @@
 import type { FastifyRequest } from 'fastify';
 import { prisma } from '../../lib/db';
+import { tooManyFiles } from '../documents/multipart';
 import { AppError, badRequest } from '../../lib/errors';
 import { DOC_KINDS, saveFile } from '../../lib/files';
 
@@ -13,14 +14,16 @@ export async function readSingleFile(req: FastifyRequest) {
   return { buffer, filename: part.filename || 'file' };
 }
 
-/** Reads all multipart parts: the first `file` plus text fields (field order does not matter). */
-export async function readFileWithFields(req: FastifyRequest) {
+/** Reads the single multipart `file` plus text fields (field order does not matter). More than one file → 413. */
+export async function readFileWithFields(req: FastifyRequest, opts: { maxFileBytes?: number } = {}) {
   let file: { buffer: Buffer; filename: string } | null = null;
   const fields: Record<string, string> = {};
-  for await (const part of req.parts()) {
+  let n = 0;
+  for await (const part of req.parts({ limits: { files: 1, ...(opts.maxFileBytes ? { fileSize: opts.maxFileBytes } : {}) } })) {
     if (part.type === 'file') {
+      if (++n > 1) throw tooManyFiles(1);
       const buf = await part.toBuffer();
-      if (!file && part.fieldname === 'file') file = { buffer: buf, filename: part.filename || 'file' };
+      if (part.fieldname === 'file') file = { buffer: buf, filename: part.filename || 'file' };
     } else fields[part.fieldname] = String(part.value ?? '');
   }
   return { file, fields };

@@ -66,7 +66,7 @@ export const DocumentCreate = z.object({
 export const DocumentBulkCreate = z.object({
   documentTypeId: id,
   legalEntityId: id,
-  subjectEmployeeIds: z.array(id).min(1).max(200),
+  subjectEmployeeIds: z.array(id).min(1).max(50),
   data: dataRecord.default({}),
   dueAt: z.iso.datetime().nullish(),
   startRoute: z.boolean().default(false),

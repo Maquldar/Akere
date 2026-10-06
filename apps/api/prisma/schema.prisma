@@ -776,6 +776,9 @@ model Document {
   @@index([documentTypeId])
   @@index([pdfFileId])
   @@index([signedPdfFileId])
+  // Registration numbers are unique per legal entity + type. NULL numbers (unregistered drafts) never collide:
+  // PostgreSQL unique indexes treat NULLs as distinct, so this behaves like a partial index WHERE number IS NOT NULL.
+  @@unique([legalEntityId, documentTypeId, number])
 }
 
 model DocumentFile {

@@ -51,6 +51,9 @@ services:
       S3_SECRET_KEY: akere-minio-secret
       SMTP_URL: smtp://mailpit:1025
       COOKIE_SECURE: "false"
+      # web → api goes through the Next.js rewrite, which appends the client IP to X-Forwarded-For (one hop).
+      # In production do not publish :4000; expose only the web/reverse proxy.
+      TRUST_PROXY: "1"
     ports: ["4000:4000"]
 
   web:

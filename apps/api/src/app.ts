@@ -14,6 +14,9 @@ import { registerModules } from './modules';
 
 export type App = FastifyInstance;
 
+/** Trust the nearest `n` proxies (proxy-addr hop index 0 = the socket peer). */
+const hops = (n: number) => (_addr: string, i: number) => i < n;
+
 function zodDetails(issues: { path: PropertyKey[]; message: string }[]) {
   const fieldErrors: Record<string, string[]> = {};
   const formErrors: string[] = [];
@@ -28,7 +31,8 @@ function zodDetails(issues: { path: PropertyKey[]; message: string }[]) {
 export async function buildApp(opts: { logger?: boolean } = {}) {
   const app = Fastify({
     logger: opts.logger === false ? false : { level: config.LOG_LEVEL, redact: ['req.headers.cookie', 'req.headers.authorization'] },
-    trustProxy: true,
+    // Only trust X-Forwarded-For from configured proxies; otherwise clients could spoof req.ip and dodge rate limits.
+    trustProxy: typeof config.TRUST_PROXY === 'number' ? hops(config.TRUST_PROXY) : config.TRUST_PROXY,
     bodyLimit: 2 * 1024 * 1024,
   }).withTypeProvider<ZodTypeProvider>();
 
@@ -37,7 +41,7 @@ export async function buildApp(opts: { logger?: boolean } = {}) {
 
   await app.register(helmet, { contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'same-origin' } });
   await app.register(cookie);
-  await app.register(multipart, { limits: { fileSize: MAX_FILE_BYTES, files: 50, fields: 50 } });
+  await app.register(multipart, { limits: { fileSize: MAX_FILE_BYTES, files: 10, fields: 50 } });
   await app.register(rateLimit, {
     global: true,
     max: 300,
@@ -77,8 +81,11 @@ export async function buildApp(opts: { logger?: boolean } = {}) {
       if (err.code === 'P2025') return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Resource not found' } });
     }
     const fe = err as FastifyError;
-    if (fe.code === 'FST_REQ_FILE_TOO_LARGE' || fe.code === 'FST_FILES_LIMIT') {
+    if (fe.code === 'FST_REQ_FILE_TOO_LARGE') {
       return reply.status(413).send({ error: { code: 'FILE_TOO_LARGE', message: 'File is too large' } });
+    }
+    if (fe.code === 'FST_FILES_LIMIT' || fe.code === 'FST_PARTS_LIMIT') {
+      return reply.status(413).send({ error: { code: 'FILE_TOO_LARGE', message: 'Too many files in one request', details: { rule: 'TOO_MANY_FILES' } } });
     }
     if (fe.statusCode && fe.statusCode < 500) {
       return reply.status(fe.statusCode).send({ error: { code: 'VALIDATION_ERROR', message: fe.message } });

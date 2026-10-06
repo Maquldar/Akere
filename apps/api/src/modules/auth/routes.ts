@@ -43,15 +43,26 @@ export default async function authRoutes(fastify: FastifyInstance) {
       await verifyPassword('$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$Zm9v', req.body.password); // equalize timing
       throw invalid;
     }
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      throw new AppError(429, 'RATE_LIMITED', 'Account temporarily locked', { retryAfterSec: Math.ceil((user.lockedUntil.getTime() - Date.now()) / 1000) });
+    const locked = (until: Date | null) =>
+      new AppError(429, 'RATE_LIMITED', 'Account temporarily locked', { retryAfterSec: Math.max(1, Math.ceil(((until?.getTime() ?? Date.now() + LOCK_MS) - Date.now()) / 1000)) });
+    if (user.lockedUntil && user.lockedUntil > new Date()) throw locked(user.lockedUntil);
+    // Reserve an attempt atomically BEFORE the (slow) password check, so parallel guesses cannot all slip past the
+    // counter: the attempt that reaches LOCK_AFTER sets the lock at once and later ones are refused without verifying.
+    // An expired lock restarts the count. A successful login clears both fields.
+    const lockMs = LOCK_MS;
+    const reserved = await prisma.$queryRaw<{ failedLogins: number }[]>`
+      UPDATE "User" SET
+        "failedLogins" = CASE WHEN "lockedUntil" IS NOT NULL THEN 1 ELSE "failedLogins" + 1 END,
+        "lockedUntil" = CASE WHEN (CASE WHEN "lockedUntil" IS NOT NULL THEN 1 ELSE "failedLogins" + 1 END) >= ${LOCK_AFTER}
+          THEN now() + make_interval(secs => ${lockMs / 1000}) ELSE NULL END
+      WHERE id = ${user.id} AND ("lockedUntil" IS NULL OR "lockedUntil" <= now())
+        AND (CASE WHEN "lockedUntil" IS NOT NULL THEN 0 ELSE "failedLogins" END) < ${LOCK_AFTER}
+      RETURNING "failedLogins"`;
+    if (!reserved.length) {
+      const cur = await prisma.user.findUnique({ where: { id: user.id }, select: { lockedUntil: true } });
+      throw locked(cur?.lockedUntil ?? null);
     }
     if (!(await verifyPassword(user.passwordHash, req.body.password))) {
-      const failed = user.failedLogins + 1;
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { failedLogins: failed >= LOCK_AFTER ? 0 : failed, lockedUntil: failed >= LOCK_AFTER ? new Date(Date.now() + LOCK_MS) : null },
-      });
       await audit({ tenantId: user.tenantId, userId: user.id }, 'auth.login_failed', 'User', user.id, {}, { ip: req.ip });
       throw invalid;
     }

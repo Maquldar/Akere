@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client';
 import { MarksQuery, TIME_MARK_TYPES, WeekQuery, type MarkResult, type MyWeek, type TimeMarkType } from '@akere/shared';
 import { prisma } from '../../lib/db';
 import { requireUser } from '../../lib/auth';
+import { tooManyFiles } from '../documents/multipart';
 import { badRequest, businessRule, forbidden } from '../../lib/errors';
 import { registerFileAccess, saveFile } from '../../lib/files';
 import { managedEmployeeScope } from '../../lib/scope';
@@ -35,8 +36,11 @@ async function readMarkRequest(req: FastifyRequest) {
   let selfie: { buffer: Buffer; filename: string } | null = null;
   let raw: Record<string, unknown> = {};
   if (req.isMultipart()) {
-    for await (const part of req.parts()) {
+    let files = 0;
+    // One selfie at most: every file part is buffered in memory (M7).
+    for await (const part of req.parts({ limits: { files: 1 } })) {
       if (part.type === 'file') {
+        if (++files > 1) throw tooManyFiles(1);
         const buf = await part.toBuffer();
         if (!selfie && (part.fieldname === 'selfie' || part.fieldname === 'file') && buf.length) selfie = { buffer: buf, filename: part.filename || 'selfie.jpg' };
       } else raw[part.fieldname] = part.value === '' ? undefined : part.value;

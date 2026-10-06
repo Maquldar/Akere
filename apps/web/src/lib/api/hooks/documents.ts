@@ -78,7 +78,7 @@ export function useCreateDocument() {
 export function useBulkCreateDocuments() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: DocumentBulkCreate) => apiFetch<{ documentIds: string[] }>('/documents/bulk', { method: 'POST', body: input }),
+    mutationFn: (input: DocumentBulkCreate) => apiFetch<{ documentIds: string[]; failed?: { employeeId: string; reason: string }[] }>('/documents/bulk', { method: 'POST', body: input }),
     onSuccess: () => invalidateDocuments(qc),
   });
 }

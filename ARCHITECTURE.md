@@ -144,7 +144,8 @@ Key modelling decisions:
 - **RBAC**: `packages/shared/src/permissions.ts` defines permission keys (e.g. `candidate.read`, `document.sign`, `timesheet.manage`) → roles (ADMIN, HR, MANAGER, EMPLOYEE). Each route declares `requirePermission(...)`.
 - **Row scoping** (rules): HR is scoped to assigned legal entities (empty = all); MANAGER is scoped to the subtree of employees whose `managerId` chain leads to them; EMPLOYEE only to self. Implemented as Prisma `where` builders in `lib/scope.ts`, applied in services (and covered by tests).
 - **Signing authority**: `RoleAssignment.canSignForLegalEntity` determines who resolves the SIGNATORY route rule.
-- **Deputies**: when a step is assigned to user X and X has an active deputy Y, both can act; the signature records `onBehalfOfId = X`.
+- **Deputies**: when a step is assigned to user X and X has an active deputy Y, both can act; the signature records `onBehalfOfId = X`. Exception: ACKNOWLEDGE steps (personal acknowledgment of orders and ВНД) can only be completed by the assignee personally.
+- **Concurrency**: route transitions lock the document row (`SELECT … FOR UPDATE`) and claim steps with conditional updates; request submission takes a per-employee advisory lock (no vacation double-spend); login attempts and OTP attempts are counted atomically.
 
 ## 5. Third-party adapters
 

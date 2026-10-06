@@ -14,6 +14,7 @@ import { pageArgs, toPage } from '../../lib/pagination';
 import { registerFileAccess, toFileRef } from '../../lib/files';
 import { tenantTimezone, todayLocal } from '../../lib/calendar';
 import { sickLeaveRegistry } from '../../adapters/sick-leave';
+import { assertAttachableFiles } from '../uploads/service';
 import { empRef, empRefInclude } from '../time/views';
 
 // Scanned sick-leave sheets: visible to whoever can read the sick leave (HR, managers, the employee).
@@ -49,8 +50,10 @@ async function assertManagedEmployee(u: UserCtx, employeeId: string) {
   return e;
 }
 
-async function assertFile(tenantId: string, fileId: string | null | undefined) {
-  if (fileId && !(await prisma.storedFile.findFirst({ where: { id: fileId, tenantId } }))) throw notFound('File');
+/** The scan must be the user's own fresh upload (H1): see assertAttachableFiles. */
+async function assertFile(u: UserCtx, fileId: string | null | undefined, exceptSickLeaveId?: string) {
+  if (!fileId) return;
+  await assertAttachableFiles(u, [fileId], { fail: () => notFound('File'), exceptSickLeaveId });
 }
 
 const absenceNote = (number: string) => `Больничный лист № ${number}`;
@@ -94,7 +97,7 @@ export default async function sickLeaveRoutes(fastify: FastifyInstance) {
     const b = req.body;
     if (b.endDate < b.startDate) throw badRequest('End date is before start date', { fieldErrors: { endDate: ['Must not be before startDate'] }, formErrors: [] });
     const emp = await assertManagedEmployee(u, b.employeeId);
-    await assertFile(u.tenantId, b.fileId);
+    await assertFile(u, b.fileId);
     if (await prisma.sickLeave.findFirst({ where: { tenantId: u.tenantId, number: b.number } })) throw conflict('Sick leave with this number already exists', { fields: ['number'] });
     const created = await prisma.$transaction(async (tx) => {
       await assertNoOverlap(tx, b.employeeId, fromDateStr(b.startDate), fromDateStr(b.endDate));
@@ -126,7 +129,7 @@ export default async function sickLeaveRoutes(fastify: FastifyInstance) {
     const start = b.startDate ?? toDateStr(cur.startDate);
     const end = b.endDate ?? toDateStr(cur.endDate);
     if (end < start) throw badRequest('End date is before start date', { fieldErrors: { endDate: ['Must not be before startDate'] }, formErrors: [] });
-    await assertFile(u.tenantId, b.fileId);
+    if (b.fileId && b.fileId !== cur.fileId) await assertFile(u, b.fileId, cur.id);
     if (b.number && b.number !== cur.number && (await prisma.sickLeave.findFirst({ where: { tenantId: u.tenantId, number: b.number } }))) {
       throw conflict('Sick leave with this number already exists', { fields: ['number'] });
     }

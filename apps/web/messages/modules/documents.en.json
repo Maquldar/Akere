@@ -191,7 +191,9 @@
       "sideSingle": "Once sent, the document goes through its approval and signing route.",
       "createSend": "Create and send",
       "saveDraft": "Save draft",
-      "preview": "Preview"
+      "preview": "Preview",
+      "bulkMax": "No more than {max} employees at a time",
+      "bulkFailed": "Documents not created: {count}"
     },
     "card": {
       "noData": "No data",

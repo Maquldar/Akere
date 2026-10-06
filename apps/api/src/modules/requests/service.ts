@@ -15,6 +15,7 @@ import { activePrincipalIds } from '../deputies/service';
 import { getVacationBalance } from '../employees/service';
 import { canReadDocument, createDocument, getDocumentDetail, updateDocument } from '../documents/service';
 import { startRoute } from '../documents/route-engine';
+import { assertAttachableFiles } from '../uploads/service';
 import { hasDates } from './types';
 import { fmtShort, leaveDays } from './days';
 
@@ -51,10 +52,9 @@ export function cleanData(type: RequestType, data: Record<string, unknown>): Rec
   return out;
 }
 
-async function assertAttachments(u: UserCtx, ids: string[], tx: Tx = prisma) {
-  if (!ids.length) return;
-  const files = await tx.storedFile.findMany({ where: { id: { in: ids }, tenantId: u.tenantId }, select: { id: true, uploadedById: true } });
-  if (files.length !== new Set(ids).size || files.some((f) => f.uploadedById !== u.userId)) throw fieldError('attachmentFileIds', 'Unknown attachment');
+/** Own fresh uploads only (see assertAttachableFiles); a request may keep files it already references. */
+async function assertAttachments(u: UserCtx, ids: string[], tx: Tx = prisma, exceptRequestId?: string) {
+  await assertAttachableFiles(u, ids, { fail: () => fieldError('attachmentFileIds', 'Unknown attachment'), exceptRequestId }, tx);
 }
 
 async function loadType(tenantId: string, requestTypeId: string, tx: Tx = prisma) {
@@ -238,7 +238,7 @@ export async function updateRequest(tx: Tx, u: UserCtx, id: string, input: Reque
   if (r.status !== 'DRAFT' && r.status !== 'REWORK') throw conflict(`Request in status ${r.status} cannot be edited`, { rule: 'INVALID_STATUS' });
   if (input.requestTypeId !== r.requestTypeId && r.applicationDocumentId) throw businessRule('TYPE_LOCKED', 'The request type cannot be changed after submission');
   const type = input.requestTypeId === r.requestTypeId ? r.requestType : await loadType(u.tenantId, input.requestTypeId, tx);
-  await assertAttachments(u, input.attachmentFileIds, tx);
+  await assertAttachments(u, input.attachmentFileIds, tx, r.id);
   const dated = hasDates(type);
   const startDate = dated ? input.startDate ?? null : null;
   const endDate = dated ? input.endDate ?? null : null;
@@ -261,6 +261,9 @@ export async function updateRequest(tx: Tx, u: UserCtx, id: string, input: Reque
 
 /** DRAFT/REWORK → IN_APPROVAL: validates, creates (or updates and restarts) the application document. */
 export async function submitRequest(tx: Tx, u: UserCtx, id: string) {
+  const owner = await tx.request.findFirst({ where: { id, tenantId: u.tenantId }, select: { employeeId: true } });
+  // Serialize submissions per employee: balance/overlap checks and the reservation must not interleave (M1).
+  if (owner) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`request-submit:${owner.employeeId}`}))`;
   const r = await loadOwned(tx, u, id);
   if (r.status !== 'DRAFT' && r.status !== 'REWORK') throw conflict(`Request in status ${r.status} cannot be submitted`, { rule: 'INVALID_STATUS' });
   const d = draftOf(r);
@@ -423,10 +426,32 @@ export async function requestScope(u: UserCtx, tx: Tx = prisma): Promise<Prisma.
   return { ...base, OR: [own, ...(others.length ? [{ status: { not: 'DRAFT' as const }, OR: others }] : [])] };
 }
 
-export async function canReadRequest(u: UserCtx, r: { id: string; employeeId: string; status: RequestStatus }) {
+/** Same rules as requestScope, evaluated for one request with targeted queries (no participant id list). */
+export async function canReadRequest(
+  u: UserCtx,
+  r: { id: string; tenantId?: string; employeeId: string; status: RequestStatus; applicationDocumentId?: string | null; orderDocumentId?: string | null },
+) {
   if (u.employeeId && r.employeeId === u.employeeId) return true;
   if (r.status === 'DRAFT') return false;
-  return (await prisma.request.count({ where: { AND: [await requestScope(u), { id: r.id }] } })) > 0;
+  const row = r.tenantId !== undefined && r.applicationDocumentId !== undefined && r.orderDocumentId !== undefined
+    ? { tenantId: r.tenantId, applicationDocumentId: r.applicationDocumentId, orderDocumentId: r.orderDocumentId }
+    : await prisma.request.findUnique({ where: { id: r.id }, select: { tenantId: true, applicationDocumentId: true, orderDocumentId: true } });
+  if (!row || row.tenantId !== u.tenantId) return false;
+  const le = hrLegalEntityIds(u);
+  if (le === null) return true;
+  if (le.length && (await prisma.employee.count({ where: { id: r.employeeId, legalEntityId: { in: le } } }))) return true;
+  if ((await managerSubtree(u)).includes(r.employeeId)) return true;
+  const docIds = [row.applicationDocumentId, row.orderDocumentId].filter((x): x is string => !!x);
+  if (!docIds.length) return false;
+  const principals = await activePrincipalIds(u.userId);
+  const step = await prisma.routeStep.findFirst({
+    where: {
+      documentId: { in: docIds }, document: { tenantId: u.tenantId, kind: { in: ['APPLICATION', 'ORDER'] } },
+      OR: [{ assigneeUserId: { in: [u.userId, ...principals] } }, { actedById: u.userId }],
+    },
+    select: { id: true },
+  });
+  return !!step;
 }
 
 /** where-clause for the list `scope` parameter. */

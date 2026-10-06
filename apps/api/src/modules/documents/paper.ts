@@ -2,7 +2,7 @@ import type { Tx } from '../../lib/db';
 import { conflict } from '../../lib/errors';
 import { saveFile } from '../../lib/files';
 import { registerNumber } from './numbering';
-import { finalizeDocument, startRoute } from './route-engine';
+import { finalizeDocument, lockDocument, startRoute } from './route-engine';
 
 /**
  * "Signed on paper" mode (F-21): stores the scan as a new attachment, completes every remaining route step
@@ -12,6 +12,7 @@ export async function completePaperSigned(
   tx: Tx,
   opts: { documentId: string; actorUserId: string; scan: { filename: string; buffer: Buffer }; registeredAt?: Date },
 ) {
+  await lockDocument(tx, opts.documentId);
   let doc = await tx.document.findUniqueOrThrow({ where: { id: opts.documentId } });
   if (['COMPLETED', 'CANCELLED', 'REJECTED'].includes(doc.status)) throw conflict(`Document in status ${doc.status} cannot be completed on paper`, { rule: 'INVALID_STATUS' });
   const stored = await saveFile({ tenantId: doc.tenantId, buffer: opts.scan.buffer, filename: opts.scan.filename, allowed: ['pdf', 'jpg', 'png'], uploadedById: opts.actorUserId }, tx);

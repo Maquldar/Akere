@@ -57,3 +57,35 @@ export async function purgeUploads(now: Date = new Date()): Promise<{ deleted: n
   }
   return { deleted };
 }
+
+/**
+ * A user may attach (to a request or a sick leave) only files they uploaded themselves that are not already part of
+ * another context: not a candidate document file, not a document attachment version, not a document PDF / signed PDF,
+ * not a time-mark selfie or employee photo, not on another sick leave and — unless `allowRequestReuse` — not on a
+ * request. Otherwise attaching would extend the file's visibility (the file access checkers follow the attachment).
+ * Throws the given error (400/404 for the field) when any id fails.
+ */
+export async function assertAttachableFiles(
+  u: { tenantId: string; userId: string },
+  ids: string[],
+  opts: { fail: () => Error; exceptSickLeaveId?: string; exceptRequestId?: string; allowRequestReuse?: boolean },
+  tx: Tx = prisma,
+) {
+  const unique = [...new Set(ids)];
+  if (!unique.length) return;
+  const files = await tx.storedFile.findMany({
+    where: { id: { in: unique }, tenantId: u.tenantId, uploadedById: u.userId, candidateDocumentId: null, versions: { none: {} } },
+    select: { id: true },
+  });
+  if (files.length !== unique.length) throw opts.fail();
+  const [docs, marks, photos, sick, requests] = await Promise.all([
+    tx.document.count({ where: { OR: [{ pdfFileId: { in: unique } }, { signedPdfFileId: { in: unique } }] } }),
+    tx.timeMark.count({ where: { selfieFileId: { in: unique } } }),
+    tx.employee.count({ where: { photoFileId: { in: unique } } }),
+    tx.sickLeave.count({ where: { fileId: { in: unique }, ...(opts.exceptSickLeaveId ? { id: { not: opts.exceptSickLeaveId } } : {}) } }),
+    opts.allowRequestReuse
+      ? Promise.resolve(0)
+      : tx.request.count({ where: { attachmentFileIds: { hasSome: unique }, ...(opts.exceptRequestId ? { id: { not: opts.exceptRequestId } } : {}) } }),
+  ]);
+  if (docs || marks || photos || sick || requests) throw opts.fail();
+}

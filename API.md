@@ -577,3 +577,15 @@ Public endpoints (rate limited 60 req/min per key):
 - `ShiftView.location: Option|null`; `GET /time/shift-templates?all=true` includes inactive templates; T-13 cell code `Я` = normal presence.
 - Computation details: an unmarked break on a closed day is auto-deducted (if ≥ 4 h worked remain); time before shift start is not work; all hours on a day off (no shift / public holiday / "Работа в выходной") are 2x, while scheduled weekend shifts (e.g. 2/2) are normal; GPS accuracy added to the geofence radius is capped at 150 m.
 - Editing a shift resets it to DRAFT. Norm hours = working days × 8 (not reduced for absences or mid-month hire). T-13 confirmation total = managers with direct reports among the sheet rows.
+
+## Addendum (security hardening, review round 1)
+- `POST /documents/bulk`: max **50** employees; each document is created in its own transaction; response `{ documentIds: string[]; failed: { employeeId: string; reason: string }[] }`.
+- `POST /documents/bulk-approve`: ВНД fail with reason `USE_VND_ACKNOWLEDGE` (acknowledge via `/vnd/:id/acknowledge`).
+- Personnel documents (EMPLOYMENT_CONTRACT, SUPPLEMENTARY_AGREEMENT, HIRE/TRANSFER/DISMISSAL_ORDER) can be created only with `employee.manage` and HR scope over the legal entity (403 otherwise).
+- Deputies and the ROLE_HR pool cannot act on ACKNOWLEDGE steps — only the assignee acknowledges personally.
+- `POST /documents/:id/register`: concurrent duplicate manual number → `409 CONFLICT` with `details.rule = NUMBER_TAKEN` (DB unique index).
+- Multipart: one file per request unless stated; archive accepts up to 20 files/meta items; extra file parts → `413 FILE_TOO_LARGE` with `details.rule = TOO_MANY_FILES`.
+- Candidate import: ≤ 2 MB upload, ≤ 20 MB uncompressed, ≤ 1000 zip entries → otherwise 413. Candidate export capped at 1000 rows (`X-Export-Truncated: true` header when cut).
+- Attachments (`fileId` on sick leaves, `attachmentFileIds` on requests) must be the caller's own unreferenced uploads from `POST /uploads`.
+- Outbox: one-time codes are redacted (`[скрыто: одноразовый код]`) when a real provider delivers them; kept only in sandbox/demo mode where the outbox is the delivery channel.
+- Env `TRUST_PROXY` (default `false`; `1` behind one reverse proxy, or a CIDR list) controls which client IP rate limits see. Never expose the API port directly when it is set.

@@ -19,7 +19,7 @@ registerFileAccess(async (ctx, file) => {
   if (ctx.kind !== 'user') return false;
   const rows = await prisma.request.findMany({
     where: { tenantId: ctx.tenantId, attachmentFileIds: { has: file.id } },
-    select: { id: true, employeeId: true, status: true },
+    select: { id: true, tenantId: true, employeeId: true, status: true, applicationDocumentId: true, orderDocumentId: true },
     take: 5,
   });
   for (const r of rows) if (await canReadRequest(ctx, r)) return true;

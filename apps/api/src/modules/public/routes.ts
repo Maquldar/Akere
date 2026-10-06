@@ -11,7 +11,7 @@ import { AppError, forbidden, unauthenticated } from '../../lib/errors';
 import { audit } from '../../lib/audit';
 import { pageArgs, toPage } from '../../lib/pagination';
 import { fromDateStr } from '../../lib/dates';
-import { exportRecord } from '../candidates/export';
+import { exportRecords } from '../candidates/export';
 import { employeeListInclude, toEmployeeListItem } from '../employees/service';
 import { listInclude, toListItems } from '../documents/service';
 import { buildT13 } from '../time/service';
@@ -83,9 +83,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       prisma.candidate.findMany({ where, include: { legalEntity: { select: { name: true, bin: true } } }, orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }], ...pageArgs(q) }),
       prisma.candidate.count({ where }),
     ]);
-    const items = [];
-    for (const r of rows) items.push(await exportRecord(r));
-    return toPage(items, total, q);
+    return toPage(await exportRecords(rows), total, q);
   });
 
   app.post('/candidates/mark-exported', { ...guard('candidates:write'), schema: { body: PublicMarkExportedInput } }, async (req) => {

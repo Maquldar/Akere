@@ -34,7 +34,7 @@ export async function issueOtp(opts: {
     },
   });
   const text = t(opts.purpose === 'PASSWORD_RESET' ? 'otp.reset' : 'otp.login', opts.lang, { code });
-  await messaging(opts.channel).send({ tenantId: opts.tenantId, to: opts.target, subject: t('otp.subject', opts.lang), text });
+  await messaging(opts.channel).send({ tenantId: opts.tenantId, to: opts.target, subject: t('otp.subject', opts.lang), text, sensitive: true });
 }
 
 /** Returns true and consumes the latest code when it matches; counts failed attempts. */
@@ -51,10 +51,11 @@ export async function verifyOtp(opts: { purpose: OtpPurpose; target: string; cod
     orderBy: { createdAt: 'desc' },
   });
   if (!otp || otp.attempts >= MAX_ATTEMPTS) return false;
-  if (otp.codeHash !== sha256(`${opts.target}:${opts.code}`)) {
-    await prisma.otpCode.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
-    return false;
-  }
-  await prisma.otpCode.update({ where: { id: otp.id }, data: { consumedAt: new Date() } });
-  return true;
+  // Count the attempt atomically BEFORE comparing, so parallel guesses cannot exceed MAX_ATTEMPTS.
+  const counted = await prisma.otpCode.updateMany({ where: { id: otp.id, attempts: { lt: MAX_ATTEMPTS }, consumedAt: null }, data: { attempts: { increment: 1 } } });
+  if (counted.count !== 1) return false;
+  if (otp.codeHash !== sha256(`${opts.target}:${opts.code}`)) return false;
+  // Single use: only one concurrent verification of the right code may consume it.
+  const consumed = await prisma.otpCode.updateMany({ where: { id: otp.id, consumedAt: null }, data: { consumedAt: new Date() } });
+  return consumed.count === 1;
 }

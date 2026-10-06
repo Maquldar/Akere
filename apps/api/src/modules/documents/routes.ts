@@ -8,7 +8,7 @@ import {
   DocumentLinkInput, DocumentRegisterInput, DocumentReturnInput, DocumentUpdate, boolQuery, dateStr, id,
 } from '@akere/shared';
 import { prisma } from '../../lib/db';
-import { requireUser, type UserCtx } from '../../lib/auth';
+import { can, requireUser, type UserCtx } from '../../lib/auth';
 import { AppError, businessRule, conflict, forbidden, notFound } from '../../lib/errors';
 import { audit } from '../../lib/audit';
 import { pageArgs, toPage } from '../../lib/pagination';
@@ -33,8 +33,18 @@ import './hooks';
 
 const idParam = z.object({ id });
 
+/**
+ * Document types that change employment (contracts and HR-event orders): completing them applies HR effects
+ * (employees/service applyHrEventDocument), so only HR/ADMIN with employee.manage over the legal entity may create them.
+ */
+export const HR_EVENT_TYPE_CODES = ['EMPLOYMENT_CONTRACT', 'SUPPLEMENTARY_AGREEMENT', 'HIRE_ORDER', 'TRANSFER_ORDER', 'DISMISSAL_ORDER'];
+
 /** Non-HR creators may only create documents about employees they manage (or themselves). */
-async function assertCanCreate(u: UserCtx, legalEntityId: string, subjectEmployeeIds: string[]) {
+async function assertCanCreate(u: UserCtx, legalEntityId: string, subjectEmployeeIds: string[], documentTypeId: string) {
+  const type = await prisma.documentType.findFirst({ where: { id: documentTypeId, tenantId: u.tenantId }, select: { code: true } });
+  if (type && HR_EVENT_TYPE_CODES.includes(type.code) && !(can(u, 'employee.manage') && isDocHr(u, legalEntityId))) {
+    throw forbidden('Only HR can create contracts and personnel orders');
+  }
   if (isDocHr(u, legalEntityId)) return;
   if (!subjectEmployeeIds.length) {
     const own = u.employeeId ? await prisma.employee.findUnique({ where: { id: u.employeeId }, select: { legalEntityId: true } }) : null;
@@ -108,7 +118,7 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
   app.post('/documents', { schema: { body: DocumentCreate } }, async (req, reply) => {
     const u = requireUser(req, 'document.create');
     const b = req.body;
-    await assertCanCreate(u, b.legalEntityId, b.subjectEmployeeId ? [b.subjectEmployeeId] : []);
+    await assertCanCreate(u, b.legalEntityId, b.subjectEmployeeId ? [b.subjectEmployeeId] : [], b.documentTypeId);
     const docId = await inTx((tx) => createDocument(tx, {
       tenantId: u.tenantId, authorUserId: u.userId, documentTypeId: b.documentTypeId, legalEntityId: b.legalEntityId, title: b.title,
       subjectEmployeeId: b.subjectEmployeeId, data: b.data, dueAt: b.dueAt ? new Date(b.dueAt) : null, startRoute: b.startRoute,
@@ -120,18 +130,23 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
     const u = requireUser(req, 'document.create');
     const b = req.body;
     const subjects = [...new Set(b.subjectEmployeeIds)];
-    await assertCanCreate(u, b.legalEntityId, subjects);
-    const documentIds = await inTx(async (tx) => {
-      const ids: string[] = [];
-      for (const subjectEmployeeId of subjects) {
-        ids.push(await createDocument(tx, {
+    await assertCanCreate(u, b.legalEntityId, subjects, b.documentTypeId);
+    // One short transaction per document (PDF rendering + numbering lock are not held across the whole batch);
+    // failures are reported per employee instead of rolling back the documents already created (P3).
+    const documentIds: string[] = [];
+    const failed: { employeeId: string; reason: string }[] = [];
+    for (const subjectEmployeeId of subjects) {
+      try {
+        documentIds.push(await inTx((tx) => createDocument(tx, {
           tenantId: u.tenantId, authorUserId: u.userId, documentTypeId: b.documentTypeId, legalEntityId: b.legalEntityId,
           subjectEmployeeId, data: b.data, dueAt: b.dueAt ? new Date(b.dueAt) : null, startRoute: b.startRoute,
-        }));
+        })));
+      } catch (e) {
+        if (!(e instanceof AppError)) req.log.error(e);
+        failed.push({ employeeId: subjectEmployeeId, reason: failureReason(e) });
       }
-      return ids;
-    });
-    return reply.status(201).send({ documentIds });
+    }
+    return reply.status(201).send({ documentIds, failed });
   });
 
   app.post('/documents/bulk-approve', { schema: { body: DocumentBulkIds } }, async (req) => {
@@ -141,7 +156,9 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
     const principalIds = await activePrincipalIds(u.userId);
     for (const docId of [...new Set(req.body.documentIds)]) {
       try {
-        await getReadableDocument(u, docId);
+        const doc = await getReadableDocument(u, docId);
+        // ВНД are acknowledged personally via /vnd/:id/acknowledge (signature rules apply there), never in bulk.
+        if (doc.kind === 'VND') throw businessRule('USE_VND_ACKNOWLEDGE', 'ВНД are acknowledged via /vnd/:id/acknowledge');
         await inTx(async (tx) => {
           const act = await findActionableStep(tx, { userId: u.userId, principalIds }, docId, ['APPROVE', 'ACKNOWLEDGE']);
           if (!act) throw businessRule('NOTHING_TO_APPROVE', 'No pending approval step');

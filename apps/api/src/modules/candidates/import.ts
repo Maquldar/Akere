@@ -1,5 +1,7 @@
 import ExcelJS from 'exceljs';
 import { CandidateInput } from '@akere/shared';
+import { AppError } from '../../lib/errors';
+import { zipStats } from '../../lib/zip';
 
 /** Columns of the bulk-import template (F-03). `key` is the CandidateInput field reported in row errors. */
 const COLUMNS = [
@@ -22,6 +24,20 @@ const GENDERS = ['Мужской', 'Женский'];
 const CHANNEL_OPTIONS = ['Email', 'SMS', 'WhatsApp', 'Email + SMS', 'Email + WhatsApp', 'SMS + WhatsApp', 'Email + SMS + WhatsApp'];
 const YES_NO = ['Да', 'Нет'];
 export const MAX_IMPORT_ROWS = 1000;
+/** Upload cap for the import workbook and limits checked on its ZIP central directory before parsing (M7). */
+export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
+export const MAX_IMPORT_UNCOMPRESSED_BYTES = 20 * 1024 * 1024;
+export const MAX_IMPORT_ZIP_ENTRIES = 1000;
+
+/** Rejects (413) workbooks that would inflate beyond the limits; malformed archives are left to the parser's error. */
+export function assertImportArchiveSize(buffer: Buffer) {
+  if (buffer.length > MAX_IMPORT_BYTES) throw new AppError(413, 'FILE_TOO_LARGE', 'The import file must not exceed 2 MB');
+  const z = zipStats(buffer);
+  if (!z) throw new AppError(413, 'FILE_TOO_LARGE', 'The import file is not a supported XLSX archive');
+  if (z.entries > MAX_IMPORT_ZIP_ENTRIES || z.uncompressedBytes > MAX_IMPORT_UNCOMPRESSED_BYTES) {
+    throw new AppError(413, 'FILE_TOO_LARGE', 'The import file is too large when unpacked', { entries: z.entries, uncompressedBytes: z.uncompressedBytes });
+  }
+}
 
 export async function buildImportTemplate(): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
