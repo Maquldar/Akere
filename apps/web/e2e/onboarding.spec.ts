@@ -82,10 +82,10 @@ test('candidate onboarding: template → candidate → request → portal autofi
   await shot(page, '02-registry');
   await page.getByRole('link', { name: 'Новый кандидат' }).first().click();
   await expect(page.getByRole('heading', { name: 'Новый кандидат', level: 1 })).toBeVisible();
-  await page.getByLabel('Фамилия').fill(lastName);
-  await page.getByLabel('Имя', { exact: true }).fill(firstName);
-  await page.getByLabel('ИИН', { exact: true }).fill(randomIin());
-  await page.getByLabel('Электронный адрес').fill(email);
+  await page.getByRole('textbox', { name: /^Фамилия/ }).fill(lastName);
+  await page.getByRole('textbox', { name: /^Имя/ }).fill(firstName);
+  await page.getByRole('textbox', { name: /^ИИН/ }).fill(randomIin());
+  await page.getByRole('textbox', { name: /^Электронный адрес/ }).fill(email);
   await page.getByRole('button', { name: 'Сохранить', exact: true }).first().click();
   await expect(page).toHaveURL(/\/ru\/candidates\/[a-z0-9]+$/);
   await expect(page.getByRole('heading', { name: `${lastName} ${firstName}`, level: 1 })).toBeVisible();
@@ -121,7 +121,7 @@ test('candidate onboarding: template → candidate → request → portal autofi
   await portal.getByRole('button', { name: 'Заполнить автоматически' }).click();
   const sms = portal.getByRole('dialog', { name: 'Согласие на получение данных' });
   await expect(sms).toBeVisible();
-  await expect(sms.getByText('1414')).toBeVisible();
+  await expect(sms.getByText('1414', { exact: true })).toBeVisible();
   await shot(portal, '04-portal-sms-360');
   await sms.getByRole('button', { name: 'Ответить 511 (ДА)' }).click();
   await expect(sms.getByText('Документы загружены')).toBeVisible();

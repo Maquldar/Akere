@@ -33,6 +33,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Lets several dev servers run side by side (e.g. NEXT_DIST_DIR=.next-3104); production uses .next.
+  distDir: process.env.NEXT_DIST_DIR ?? '.next',
   // Monorepo: trace workspace deps from the repo root so the standalone bundle is complete.
   outputFileTracingRoot: path.resolve(process.cwd(), '../..'),
   reactStrictMode: true,

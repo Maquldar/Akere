@@ -283,7 +283,7 @@ function RequestView({ r }: { r: DocumentRequestView }) {
           <h2 id="docs-title" className="text-[15px] font-semibold text-fg">
             {t('docsTitle')}
           </h2>
-          <span className="text-xs text-fg-muted tabular">{t('progress', { done: completeCount, total: r.documents.length })}</span>
+          <span className="whitespace-nowrap text-xs text-fg-muted tabular">{t('progress', { done: completeCount, total: r.documents.length })}</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-surface-active" role="progressbar" aria-label={t('docsTitle')} aria-valuemin={0} aria-valuemax={r.documents.length} aria-valuenow={completeCount}>
           <div className="h-full rounded-full bg-green-solid transition-[width]" style={{ width: `${r.documents.length ? (completeCount / r.documents.length) * 100 : 0}%` }} />

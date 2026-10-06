@@ -4,6 +4,7 @@ import { CheckCircle2, ChevronLeft, CircleSlash, Loader2, UserRound } from 'luci
 import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
+import { APP_TIME_ZONE } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export type AutofillStage =
@@ -31,7 +32,7 @@ export function AutofillDialog({
   const tc = useTranslations('common');
   const locale = useLocale();
   if (!stage) return null;
-  const time = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : `${locale}-KZ`, { hour: '2-digit', minute: '2-digit' }).format(new Date());
+  const time = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : `${locale}-KZ`, { hour: '2-digit', minute: '2-digit', timeZone: APP_TIME_ZONE }).format(new Date());
   const reply = stage.kind === 'loading' ? stage.reply : stage.kind === 'granted' ? '511' : stage.kind === 'denied' ? '512' : null;
   const busy = stage.kind === 'loading';
 

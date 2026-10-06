@@ -166,7 +166,7 @@ export function ReviewPanel({ candidate, canManage, onRequestDocuments }: { cand
             </div>
           </div>
           {editable && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 lg:shrink-0 lg:flex-nowrap">
               <Button
                 variant="outline"
                 className="border-red-border text-red-fg hover:bg-red-bg"
