@@ -1,6 +1,7 @@
 'use client';
 
 import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Link } from '@/i18n/navigation';
 
 /**
@@ -47,7 +48,7 @@ const components: Components = {
 export function Markdown({ children }: { children: string }) {
   return (
     <div className="text-[15px]">
-      <ReactMarkdown components={components} skipHtml>
+      <ReactMarkdown components={components} remarkPlugins={[remarkGfm]} skipHtml>
         {children}
       </ReactMarkdown>
     </div>

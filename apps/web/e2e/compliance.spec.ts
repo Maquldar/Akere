@@ -229,6 +229,7 @@ test('Reports, archive, help and support render', async ({ browser }) => {
   await hr.getByLabel('Название, строка 1').fill(`E2E архивный приказ ${Date.now()}`);
   await hr.getByLabel('Дата регистрации, строка 1').fill('2019-03-15');
   await shot(hr, '09-archive');
+  expect(await hr.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   await hr.getByRole('button', { name: 'Загрузить в архив' }).click();
   await expect(hr.getByText('Загружено: 1')).toBeVisible();
   await expect(hr.getByRole('link', { name: 'Открыть', exact: true })).toBeVisible();

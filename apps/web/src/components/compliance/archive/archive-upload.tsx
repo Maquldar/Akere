@@ -248,8 +248,8 @@ export function ArchiveUpload() {
   return (
     <RequireAccess allow={(a) => can(a, 'document.manage')}>
       {header}
-      <div className="grid gap-5">
-        <Card>
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
+        <Card className="min-w-0">
           <CardHeader title={t('step1')} />
           <CardBody className="grid gap-4">
             <FileDropzone accept={ACCEPT} multiple onFiles={addFiles} label={t('dropLabel')} disabled={upload.isPending} />
@@ -285,7 +285,7 @@ export function ArchiveUpload() {
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader title={t('step2')} count={rows.length} />
           {rows.length === 0 ? (
             <CardBody>
