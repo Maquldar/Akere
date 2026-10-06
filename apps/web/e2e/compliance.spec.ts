@@ -56,7 +56,7 @@ async function login(browser: Browser, email: string): Promise<Page> {
   await page.getByLabel('Эл. почта или телефон').fill(email);
   await page.getByRole('textbox', { name: 'Пароль', exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Войти', exact: true }).click();
-  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible({ timeout: 60_000 });
   await ctx.storageState({ path: file });
   return page;
 }
@@ -66,12 +66,13 @@ test.describe.configure({ mode: 'serial', timeout: 240_000 });
 test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR sees progress and downloads the sheet', async ({ browser }) => {
   const title = `E2E Инструкция по охране труда ${Date.now()}`;
   const hr = await login(browser, 'hr@dala.kz');
-
-  // Legal entity and department of the employee who will acknowledge.
-  const res = await hr.request.get(`/api/v1/employees?q=${encodeURIComponent('Серикова')}`);
-  expect(res.ok()).toBeTruthy();
-  const serikova = ((await res.json()) as { items: { fullName: string; legalEntity: { name: string }; department: { name: string } | null }[] }).items[0]!;
-  expect(serikova.department).toBeTruthy();
+  // Legal entity and department of the employee who will acknowledge (from her own profile).
+  const emp = await login(browser, 'a.serikova@dala.kz');
+  const meRes = await emp.request.get('/api/v1/auth/me');
+  expect(meRes.ok()).toBeTruthy();
+  const me = (await meRes.json()) as { fullName: string; employee: { legalEntity: string; department: string | null } };
+  expect(me.employee.department).toBeTruthy();
+  const serikova = { fullName: me.fullName, legalEntity: { name: me.employee.legalEntity }, department: { name: me.employee.department! } };
 
   await hr.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'ВНД' }).click();
   await expect(hr.getByRole('heading', { name: 'ВНД', level: 1 })).toBeVisible();
@@ -83,8 +84,11 @@ test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR se
   await hr.getByRole('button', { name: 'Новый ВНД' }).first().click();
   const dialog = hr.getByRole('dialog');
   await dialog.getByLabel('Название').fill(title);
-  await dialog.getByRole('combobox', { name: 'Юрлицо' }).click();
+  const entitySelect = dialog.getByRole('combobox', { name: 'Юрлицо' });
+  await expect(entitySelect).not.toHaveText('Выберите…'); // preselected once the list loads
+  await entitySelect.click();
   await hr.getByRole('option', { name: serikova.legalEntity.name }).click();
+  await expect(entitySelect).toHaveText(serikova.legalEntity.name);
   await dialog.locator('input[type=file]').setInputFiles({ name: 'instruction.pdf', mimeType: 'application/pdf', buffer: tinyPdf('Safety instruction') });
   await dialog.getByRole('button', { name: 'Создать' }).click();
   await expect(hr.getByRole('heading', { name: title, level: 1 })).toBeVisible();
@@ -113,7 +117,6 @@ test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR se
   const before = Number((await hr.getByTestId('vnd-progress').innerText()).split('/')[0]!.trim());
 
   // Employee acknowledges
-  const emp = await login(browser, 'a.serikova@dala.kz');
   await emp.goto('/ru/vnd');
   await expect(emp.getByRole('heading', { name: 'ВНД', level: 1 })).toBeVisible();
   const card = emp.getByRole('link', { name: new RegExp(title) });

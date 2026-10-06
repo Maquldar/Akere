@@ -14,15 +14,23 @@ const HR = 'hr@dala.kz';
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/requests-${name}.png`, fullPage: false });
 
+type StorageState = Awaited<ReturnType<import('@playwright/test').BrowserContext['storageState']>>;
+/** Sessions are reused across tests: the API rate-limits logins (5 / 15 min per login + IP). */
+const sessions = new Map<string, StorageState>();
+
 async function login(browser: Browser, email: string, viewport?: { width: number; height: number }) {
-  const context = await browser.newContext(viewport ? { viewport } : {});
+  const cached = sessions.get(email);
+  const context = await browser.newContext({ ...(viewport ? { viewport } : {}), ...(cached ? { storageState: cached } : {}) });
   const page = await context.newPage();
-  await page.goto('/ru/login');
-  await page.getByLabel('Эл. почта или телефон').fill(email);
-  await page.getByRole('textbox', { name: 'Пароль', exact: true }).fill(PASSWORD);
-  await page.getByRole('button', { name: 'Войти', exact: true }).click();
-  await page.waitForURL((u) => !u.pathname.includes('/login'), { waitUntil: 'commit' });
-  await expect(page.locator('#main')).toBeVisible();
+  if (!cached) {
+    await page.goto('/ru/login');
+    await page.getByLabel('Эл. почта или телефон').fill(email);
+    await page.getByRole('textbox', { name: 'Пароль', exact: true }).fill(PASSWORD);
+    await page.getByRole('button', { name: 'Войти', exact: true }).click();
+    await page.waitForURL((u) => !u.pathname.includes('/login'), { waitUntil: 'commit' });
+    await expect(page.locator('#main')).toBeVisible();
+    sessions.set(email, await context.storageState());
+  }
   return { context, page };
 }
 

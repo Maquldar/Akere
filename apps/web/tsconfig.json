@@ -29,12 +29,14 @@
     "*.mjs",
     "*.ts",
     ".next-3103/types/**/*.ts",
+    ".next-3104/types/**/*.ts",
+    ".next-3106/types/**/*.ts",
     ".next/types/**/*.ts",
     "e2e/**/*.ts",
     "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    ".next-3104/types/**/*.ts"
+    ".next-3105/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
