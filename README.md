@@ -24,6 +24,24 @@ approval routes, employee self-service requests, vacation planning, acknowledgme
 - **Kazakhstan specifics**: ИИН/БИН checksum validation, the production calendar with holiday carry-over, 24-day annual leave
   and the 14-day part rule, Labor Code overtime rates, and RU/KZ/EN interface.
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Login with demo accounts](docs/screenshots/01-login.png) Login with one-click demo accounts | ![HR home](docs/screenshots/02-home-hr.png) HR cabinet home |
+| ![Candidates](docs/screenshots/03-candidates.png) Candidate registry (onboarding) | ![Inbox](docs/screenshots/04-documents-inbox.png) Document inbox of the CEO |
+| ![Document card](docs/screenshots/05-document-card.png) Document card with route and signing actions | ![Today board](docs/screenshots/06-timesheet-today.png) Timesheet: today board |
+| ![T-13](docs/screenshots/07-timesheet-t13.png) T-13 timesheet with KZ codes and deviations | ![Planning](docs/screenshots/08-planning.png) Shift planning grid (manager) |
+| ![VND](docs/screenshots/09-vnd.png) ВНД acknowledgment registry | ![Reports](docs/screenshots/10-reports.png) Analytics and reports |
+| ![ESUTD](docs/screenshots/11-esutd.png) ЕСУТД registry (sandbox) | ![Vacation schedule](docs/screenshots/12-vacation-schedule.png) Vacation schedule campaign |
+
+<p>
+<img src="docs/screenshots/13-mobile-my-time.png" width="260" alt="Mobile: my time"/>
+<img src="docs/screenshots/14-mobile-vacation-request.png" width="260" alt="Mobile: vacation request"/>
+</p>
+
+Regenerate with `node apps/web/e2e/capture-screens.mjs http://localhost:3000` against a seeded instance.
+
 ## Stack
 
 | Layer | Tech |
