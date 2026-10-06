@@ -36,6 +36,17 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
           onInteractOutside={(e) => {
             if (!dismissible) e.preventDefault();
           }}
+          onOpenAutoFocus={(e) => {
+            // Focus the first field of the body instead of the close button.
+            const root = e.currentTarget as HTMLElement;
+            const first = root.querySelector<HTMLElement>(
+              '[data-dialog-body] input:not([type=hidden]):not([disabled]), [data-dialog-body] textarea, [data-dialog-body] button[role=combobox]',
+            );
+            if (first) {
+              e.preventDefault();
+              first.focus();
+            }
+          }}
           {...(description ? {} : { 'aria-describedby': undefined })}
           className={cn(
             'fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col rounded-t-2xl border border-border bg-surface shadow-pop animate-fade-in focus:outline-none',
@@ -56,7 +67,9 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
               </Button>
             </DialogPrimitive.Close>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">{children}</div>
+          <div data-dialog-body className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
+            {children}
+          </div>
           {footer && (
             <div className="pb-safe flex flex-col-reverse gap-2 border-t border-border px-5 py-3 sm:flex-row sm:justify-end">
               {footer}

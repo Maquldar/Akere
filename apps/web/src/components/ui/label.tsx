@@ -69,9 +69,9 @@ export function FormField({ label, children, required, error, hint, className, i
       </Label>
       {control}
       {hint && !error && (
-        <p id={hintId} className="text-xs text-fg-subtle">
+        <div id={hintId} className="text-xs text-fg-subtle">
           {hint}
-        </p>
+        </div>
       )}
       {error && (
         <p id={errorId} role="alert" className="text-xs font-medium text-red-fg">

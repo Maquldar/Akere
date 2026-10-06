@@ -31,7 +31,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(function Select
   ref,
 ) {
   return (
-    <SelectPrimitive.Root value={value || undefined} onValueChange={onValueChange} disabled={disabled} name={name}>
+    <SelectPrimitive.Root value={value ?? ''} onValueChange={onValueChange} disabled={disabled} name={name}>
       <SelectPrimitive.Trigger
         ref={ref}
         id={id}
