@@ -64,7 +64,8 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
     const and: Prisma.DocumentWhereInput[] = [await documentScope(u)];
     switch (q.box) {
       case 'inbox':
-        and.push({ status: 'IN_ROUTE', steps: { some: { status: 'PENDING', assigneeUserId: { in: [u.userId, ...principals] } } } });
+        // ВНД acknowledgments have their own inbox (/vnd/my) and badge.
+        and.push({ status: 'IN_ROUTE', kind: { not: 'VND' }, steps: { some: { status: 'PENDING', assigneeUserId: { in: [u.userId, ...principals] } } } });
         break;
       case 'outbox':
         and.push({ authorId: u.userId, status: { not: 'DRAFT' } });
@@ -185,6 +186,7 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
     const u = requireUser(req, 'document.read');
     const doc = await getReadableDocument(u, req.params.id);
     if (!canManageDoc(u, doc)) throw forbidden();
+    if (doc.kind === 'VND') throw businessRule('USE_VND_SEND', 'ВНД are sent for acknowledgment via /vnd/:id/send');
     await inTx((tx) => startRoute(tx, doc.id, u.userId));
     return getDocumentDetail(u, doc.id);
   });
@@ -224,6 +226,9 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
   app.post('/documents/:id/approve', { schema: { params: idParam, body: DocumentApproveInput } }, async (req) => {
     const u = requireUser(req, 'document.read');
     const doc = await getReadableDocument(u, req.params.id);
+    if (doc.kind === 'VND' && (doc.data as { requireSignature?: boolean } | null)?.requireSignature !== false) {
+      throw businessRule('SIGNATURE_REQUIRED', 'This ВНД must be acknowledged with an electronic signature');
+    }
     await inTx(async (tx) => {
       const act = await findActionableStep(tx, { userId: u.userId }, doc.id, ['APPROVE', 'ACKNOWLEDGE']);
       if (!act) throw businessRule('NOTHING_TO_APPROVE', 'You have no pending approval or acknowledgment step on this document');

@@ -270,5 +270,5 @@ export async function markViewed(u: UserCtx, documentId: string) {
 /** Count of PENDING steps the user can act on directly or as an active deputy (sidebar badge). */
 export async function pendingStepCount(userId: string, tx: Tx = prisma): Promise<number> {
   const principals = await activePrincipalIds(userId, tx);
-  return tx.routeStep.count({ where: { status: 'PENDING', assigneeUserId: { in: [userId, ...principals] }, document: { status: 'IN_ROUTE' } } });
+  return tx.routeStep.count({ where: { status: 'PENDING', assigneeUserId: { in: [userId, ...principals] }, document: { status: 'IN_ROUTE', kind: { not: 'VND' } } } });
 }
