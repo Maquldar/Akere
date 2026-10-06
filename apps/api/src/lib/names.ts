@@ -3,7 +3,7 @@ type NameParts = { firstName: string; lastName: string; middleName?: string | nu
 export const fullName = (u: NameParts) => [u.lastName, u.firstName, u.middleName].filter(Boolean).join(' ');
 /** "Сулейменова Ж.А." style short name used in registries. */
 export const shortName = (u: NameParts) =>
-  `${u.lastName} ${u.firstName.charAt(0)}.${u.middleName ? ` ${u.middleName.charAt(0)}.` : ''}`.replace(/\s+(?=\S\.$)/, '');
+  `${u.lastName} ${u.firstName.charAt(0)}.${u.middleName ? `${u.middleName.charAt(0)}.` : ''}`;
 
 export type UserRef = { id: string; fullName: string; shortName: string; position: string | null; department: string | null };
 
