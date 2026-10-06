@@ -33,6 +33,7 @@ describe('template rendering', () => {
     expect(renderText('{{employee.fullName}} таб. {{employee.tabNumber}} с {{employee.hireDate}}', ctx)).toBe(`Работникова Әлия таб. ${ctx.employee!.tabNumber} с 10 января 2024 г.`);
     expect(renderText('№ {{document.number}} от {{document.date}}; {{data.salary|money}}; {{data.startDate}} / {{data.startDate|short}}; {{data.flag}}', ctx))
       .toBe('№ 5-к/26 от 06 октября 2026 г.; 350 000 ₸; 02 ноября 2026 г. / 02.11.2026; Да');
+    expect(renderText('Отпуск с {{data.startDate}}.', ctx)).toBe('Отпуск с 02 ноября 2026 г.');
     expect(renderText('{{data.missing}}|{{data.missing|optional}}|{{author.fullName}}', ctx)).toBe('________||Кадрова Жанара');
     const pdf = await renderTemplatePdf([{ type: 'heading', text: 'Договор {{document.number}}' }, { type: 'paragraph', text: 'Оклад {{data.salary|money}}' }], ctx);
     expect((await PDFDocument.load(pdf)).getPageCount()).toBe(1);

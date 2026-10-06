@@ -83,9 +83,14 @@ export function DemoAccounts() {
                 <Avatar name={u.fullName} size="md" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium text-fg">{u.fullName}</span>
-                  {u.position && <span className="block truncate text-xs text-fg-subtle">{u.position}</span>}
+                  <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                    <Badge tone={roleTone[role]} className="shrink-0 sm:hidden">
+                      {tr(role)}
+                    </Badge>
+                    {u.position && <span className="truncate text-xs text-fg-subtle">{u.position}</span>}
+                  </span>
                 </span>
-                <Badge tone={roleTone[role]} className="shrink-0">
+                <Badge tone={roleTone[role]} className="hidden shrink-0 sm:inline-flex">
                   {tr(role)}
                 </Badge>
               </button>

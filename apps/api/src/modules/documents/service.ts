@@ -89,7 +89,8 @@ export async function createDocument(tx: Tx, input: CreateDocumentInput): Promis
     },
   });
   await refreshSearchText(doc.id, tx);
-  await generateDocumentPdf(doc.id, tx);
+  // startRoute registers the number and renders the PDF itself; avoid rendering twice.
+  if (!input.startRoute) await generateDocumentPdf(doc.id, tx);
   await audit({ tenantId: input.tenantId, userId: input.authorUserId }, 'document.create', 'Document', doc.id, { type: type.code, title }, { tx });
   if (input.startRoute) await startRoute(tx, doc.id, input.authorUserId);
   return doc.id;

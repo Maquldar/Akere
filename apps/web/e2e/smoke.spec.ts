@@ -96,6 +96,7 @@ test('employee sees no admin section; mobile layout has no horizontal scroll', a
   await shot(page, '15-home-mobile');
   await page.getByRole('button', { name: 'Открыть меню' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
+  await page.waitForTimeout(400); // slide-in animation
   await expect(page.getByText('Администрирование')).toHaveCount(0);
   await shot(page, '16-mobile-drawer');
   await ctx.close();

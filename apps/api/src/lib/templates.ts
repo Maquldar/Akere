@@ -149,7 +149,9 @@ function formatValue(v: unknown, filter?: string): string {
 
 /** Replaces {{path}} / {{path|filter}} placeholders. Unknown or empty values render as a blank line. */
 export function renderText(text: string, ctx: TemplateContext): string {
-  return text.replace(/\{\{\s*([\w.]+)\s*(?:\|\s*(\w+)\s*)?\}\}/g, (_, path: string, filter?: string) => formatValue(resolvePath(ctx, path), filter));
+  return text
+    .replace(/\{\{\s*([\w.]+)\s*(?:\|\s*(\w+)\s*)?\}\}/g, (_, path: string, filter?: string) => formatValue(resolvePath(ctx, path), filter))
+    .replace(/ г\.\./g, ' г.'); // "… 2026 г.." when a date ends a sentence
 }
 
 export function renderBlocks(body: TemplateBlock[], ctx: TemplateContext): Block[] {

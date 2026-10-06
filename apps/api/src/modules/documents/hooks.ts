@@ -9,6 +9,7 @@ import { canReadDocument, createDocument, pendingStepCount } from './service';
 import { ensureDocumentType } from './defaults';
 import { inTx, startRoute } from './route-engine';
 import { fmtDue, notifyDoc } from './messages';
+import { generateDocumentPdf } from './render';
 
 // ── Sidebar badge: my pending steps (incl. as active deputy) ──
 registerInboxCounter('documents', (u) => pendingStepCount(u.userId));
@@ -64,6 +65,8 @@ async function startIfPossible(tx: Tx, documentId: string, actorUserId: string) 
   } catch (e) {
     // Missing signatory/HR must not block the hire: the document stays a draft for HR to fix and start.
     if (!(e instanceof AppError)) throw e;
+    const doc = await tx.document.findUniqueOrThrow({ where: { id: documentId }, select: { pdfFileId: true } });
+    if (!doc.pdfFileId) await generateDocumentPdf(documentId, tx);
   }
 }
 
