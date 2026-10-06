@@ -124,8 +124,6 @@ test('ВНД: HR sends to a department, employee acknowledges with ЭЦП, HR se
   const before = Number((await hr.getByTestId('vnd-progress').innerText()).split('/')[0]!.trim());
 
   // Employee acknowledges
-  emp.on('response', async (r) => { if (r.url().includes('/signing/') || r.url().includes('/acknowledge')) console.log('EMP', r.status(), r.url(), (await r.text().catch(() => '')).slice(0, 160)); });
-  emp.on('pageerror', (e) => console.log('EMP PAGEERR', e.message));
   await emp.goto('/ru/vnd');
   await expect(emp.getByRole('heading', { name: 'ВНД', level: 1 })).toBeVisible();
   const card = emp.getByRole('link', { name: new RegExp(title) });
