@@ -385,7 +385,7 @@ export function AdjustmentDialog({ employeeId, open, onOpenChange }: { employeeI
       { days: d, date, note: note.trim() },
       {
         onSuccess: () => {
-          toast.success(t('adjusted'));
+          toast.success(t('adjustedToast'));
           onOpenChange(false);
         },
         onError: (err) => {

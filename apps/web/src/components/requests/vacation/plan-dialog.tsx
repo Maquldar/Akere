@@ -5,11 +5,13 @@ import { useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/input';
+import { FormField } from '@/components/ui/label';
 import { toast } from '@/components/ui/toaster';
 import { isApiError } from '@/lib/api/errors';
 import { useApprovePlans, useSavePlan } from '@/lib/api/hooks/requests';
 import type { CampaignView, PlanRow } from '@/lib/api/types-requests';
-import { formatDays, PlanStatusPill, useRequestErrorText } from '../shared';
+import { formatDays, PlanStatusPill, useBulkReasonText, useRequestErrorText } from '../shared';
 import { PeriodsEditor, PlannedMeter, toEditable, usePeriodValidation, type EditablePeriod, type PeriodIssues } from './periods-editor';
 
 export function PlanRules() {
@@ -35,6 +37,7 @@ export function PlanRules() {
 export function usePlanActions(campaign: CampaignView, row: PlanRow) {
   const t = useTranslations('vacation.plan');
   const errorText = useRequestErrorText();
+  const reasonText = useBulkReasonText();
   const save = useSavePlan(campaign.id);
   const approve = useApprovePlans(campaign.id);
   const validate = usePeriodValidation();
@@ -69,7 +72,7 @@ export function usePlanActions(campaign: CampaignView, row: PlanRow) {
     try {
       const res = await approve.mutateAsync({ employeeIds: [row.employee.employeeId], decision, comment });
       if (res.failed.length) {
-        toast.error(res.failed[0]!.reason);
+        toast.error(reasonText(res.failed[0]!.reason));
         return false;
       }
       toast.success(decision === 'APPROVE' ? t('approvedToast') : t('rejectedToast'));
@@ -97,6 +100,9 @@ export function PlanDialog({
   const tc = useTranslations('common');
   const locale = useLocale();
   const [periods, setPeriods] = useState<EditablePeriod[]>(() => toEditable(row.periods));
+  const [rejecting, setRejecting] = useState(false);
+  const [comment, setComment] = useState('');
+  const [commentError, setCommentError] = useState<string | null>(null);
   const actions = usePlanActions(campaign, row);
   const editable = campaign.status === 'ACTIVE' && row.status !== 'APPROVED';
   const live = actions.validate(periods, row.periods, row.entitlement, campaign.year, false);
@@ -130,7 +136,22 @@ export function PlanDialog({
           )}
           {showApprove && (
             <>
-              <Button variant="outline" className="text-red-fg" onClick={async () => (await actions.approveOne('REJECT')) && close()} disabled={busy}>
+              <Button
+                variant={rejecting ? 'danger' : 'outline'}
+                className={rejecting ? undefined : 'text-red-fg'}
+                onClick={async () => {
+                  if (!rejecting) {
+                    setRejecting(true);
+                    return;
+                  }
+                  if (!comment.trim()) {
+                    setCommentError(t('commentRequired'));
+                    return;
+                  }
+                  if (await actions.approveOne('REJECT', comment.trim())) close();
+                }}
+                disabled={busy}
+              >
                 {t('reject')}
               </Button>
               <Button onClick={async () => (await actions.approveOne('APPROVE')) && close()} loading={actions.approving} disabled={busy}>
@@ -183,6 +204,11 @@ export function PlanDialog({
             </p>
           )}
         </div>
+        {rejecting && (
+          <FormField label={t('rejectComment')} required error={commentError}>
+            <Textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} rows={2} autoFocus />
+          </FormField>
+        )}
       </div>
     </Dialog>
   );

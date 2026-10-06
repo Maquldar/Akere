@@ -73,7 +73,7 @@ export function useRequestPreview(input: RequestInput | null, excludeId?: string
       apiFetch<RequestPreview>('/requests/preview', {
         method: 'POST',
         body: input,
-        query: excludeId ? { excludeId } : undefined,
+        query: excludeId ? { requestId: excludeId } : undefined,
         signal,
       }),
     enabled: input !== null,

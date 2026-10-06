@@ -187,6 +187,6 @@ export const t13CodeClass: Record<T13Code, string> = {
 export const T13_CODE_LIST: T13Code[] = ['Я', 'В', 'К', 'Б', 'О', 'БС', 'НН', 'РВ', 'Н', 'С', 'П'];
 
 /** Stable key for T-13 code translations (Cyrillic keys are fine in JSON but awkward in code). */
-export const t13CodeKey: Record<T13Code, string> = {
+export const t13CodeKey = {
   Я: 'present', В: 'dayOff', К: 'trip', Б: 'sick', О: 'vacation', БС: 'unpaid', НН: 'absence', РВ: 'dayOffWork', Н: 'night', С: 'overtime', П: 'holiday',
-};
+} as const satisfies Record<T13Code, string>;

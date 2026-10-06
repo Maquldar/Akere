@@ -38,6 +38,8 @@ export function VndAcknowledgeDialog({ open, onOpenChange, vnd }: { open: boolea
   const [pinError, setPinError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const finalized = useRef(false);
+  // Guards against creating two QR sessions (StrictMode double effects, re-renders before isPending flips).
+  const egovRequested = useRef(false);
   const egov = useSigningSession(open && method === 'egov' ? egovId : null);
   const requireSignature = vnd.requireSignature !== false;
 
@@ -65,12 +67,17 @@ export function VndAcknowledgeDialog({ open, onOpenChange, vnd }: { open: boolea
   );
 
   const startEgov = useCallback(() => {
+    if (egovRequested.current) return;
+    egovRequested.current = true;
     setError(null);
     createSession.mutate(
       { documentIds: [vnd.id], method: 'EGOV_MOBILE' },
       {
         onSuccess: (s) => setEgovId(s.id),
-        onError: (e) => setError(isApiError(e) ? e.message : tc('error')),
+        onError: (e) => {
+          egovRequested.current = false;
+          setError(isApiError(e) ? e.message : tc('error'));
+        },
       },
     );
   }, [createSession, vnd.id, tc]);
@@ -92,6 +99,7 @@ export function VndAcknowledgeDialog({ open, onOpenChange, vnd }: { open: boolea
       return;
     }
     for (const id of [egovId, ncaId]) if (id) cancelSession.mutate(id, { onError: () => undefined });
+    egovRequested.current = false;
     setEgovId(null);
     setNcaId(null);
     setPin('');
@@ -202,6 +210,7 @@ export function VndAcknowledgeDialog({ open, onOpenChange, vnd }: { open: boolea
                         size="sm"
                         className="justify-self-start"
                         onClick={() => {
+                          egovRequested.current = false;
                           setEgovId(null);
                           setError(null);
                         }}

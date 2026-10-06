@@ -23,7 +23,7 @@ import type { ArchiveItemInput, ArchiveResult } from '@/lib/api/types-compliance
 import { can } from '@/lib/permissions';
 import { cn, formatBytes } from '@/lib/utils';
 
-const ACCEPT = ['.pdf', '.jpg', '.jpeg', '.png', '.docx', '.doc', '.xlsx'];
+const ACCEPT = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.heic'];
 const MAX_FILES = 50;
 
 type Row = {

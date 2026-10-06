@@ -55,7 +55,7 @@ export const newDocumentAction: NavItem = {
   href: '/documents/new',
   icon: FilePlus2,
   phase: 3,
-  ready: false,
+  ready: true,
   visible: (ctx) => can(ctx, 'document.create'),
 };
 
@@ -64,15 +64,15 @@ export const navSections: NavSection[] = [
     key: null,
     items: [
       { key: 'home', href: '/', icon: House, phase: 1, ready: true, visible: always, exact: true },
-      { key: 'inbox', href: '/inbox', icon: Inbox, phase: 3, ready: false, visible: (c) => can(c, 'document.read'), badge: 'inbox.documents' },
+      { key: 'inbox', href: '/inbox', icon: Inbox, phase: 3, ready: true, visible: (c) => can(c, 'document.read'), badge: 'inbox.documents' },
     ],
   },
   {
     key: 'documents',
     items: [
-      { key: 'allDocuments', href: '/documents', icon: FileText, phase: 3, ready: false, visible: (c) => can(c, 'document.read'), exact: true },
-      { key: 'outgoing', href: '/documents/outgoing', icon: Send, phase: 3, ready: false, visible: (c) => can(c, 'document.read') },
-      { key: 'drafts', href: '/documents/drafts', icon: PencilLine, phase: 3, ready: false, visible: (c) => can(c, 'document.create') },
+      { key: 'allDocuments', href: '/documents', icon: FileText, phase: 3, ready: true, visible: (c) => can(c, 'document.read'), exact: true },
+      { key: 'outgoing', href: '/documents/outgoing', icon: Send, phase: 3, ready: true, visible: (c) => can(c, 'document.read') },
+      { key: 'drafts', href: '/documents/drafts', icon: PencilLine, phase: 3, ready: true, visible: (c) => can(c, 'document.create') },
       { key: 'vnd', href: '/vnd', icon: ScrollText, phase: 5, ready: true, visible: (c) => can(c, 'vnd.read'), badge: 'inbox.vnd' },
       { key: 'esutd', href: '/esutd', icon: Landmark, phase: 5, ready: true, visible: (c) => can(c, 'esutd.read'), badge: 'esutd' },
       { key: 'archive', href: '/archive', icon: Archive, phase: 5, ready: true, visible: (c) => can(c, 'document.manage') },
@@ -104,8 +104,8 @@ export const navSections: NavSection[] = [
   {
     key: 'people',
     items: [
-      { key: 'employees', href: '/employees', icon: Users, phase: 3, ready: false, visible: (c) => can(c, 'employee.manage') || (can(c, 'employee.read') && c.isManager) },
-      { key: 'deputies', href: '/deputies', icon: UserCheck, phase: 3, ready: false, visible: (c) => can(c, 'deputy.read') },
+      { key: 'employees', href: '/employees', icon: Users, phase: 3, ready: true, visible: (c) => can(c, 'employee.manage') || (can(c, 'employee.read') && c.isManager) },
+      { key: 'deputies', href: '/deputies', icon: UserCheck, phase: 3, ready: true, visible: (c) => can(c, 'deputy.read') },
     ],
   },
   {
@@ -125,9 +125,9 @@ export const navSections: NavSection[] = [
     items: [
       { key: 'orgStructure', href: '/admin/org', icon: Building2, phase: 1, ready: true, visible: (c) => can(c, 'org.manage') },
       { key: 'users', href: '/admin/users', icon: UsersRound, phase: 1, ready: true, visible: (c) => can(c, 'users.manage') },
-      { key: 'dictionaries', href: '/admin/dictionaries', icon: FolderKanban, phase: 3, ready: false, visible: (c) => can(c, 'document.manage') },
-      { key: 'documentTemplates', href: '/admin/document-templates', icon: FileCheck2, phase: 3, ready: false, visible: (c) => can(c, 'document.manage') },
-      { key: 'routes', href: '/admin/routes', icon: Route, phase: 3, ready: false, visible: (c) => can(c, 'document.manage') },
+      { key: 'dictionaries', href: '/admin/document-types', icon: FolderKanban, phase: 3, ready: true, visible: (c) => can(c, 'document.manage') },
+      { key: 'documentTemplates', href: '/admin/document-templates', icon: FileCheck2, phase: 3, ready: true, visible: (c) => can(c, 'document.manage') },
+      { key: 'routes', href: '/admin/routes', icon: Route, phase: 3, ready: true, visible: (c) => can(c, 'document.manage') },
       { key: 'audit', href: '/admin/audit', icon: ScrollText, phase: 1, ready: true, visible: (c) => can(c, 'audit.read') },
       { key: 'outbox', href: '/admin/outbox', icon: Mail, phase: 1, ready: true, visible: (c) => hasRole(c, 'ADMIN') },
       { key: 'apiKeys', href: '/admin/api-keys', icon: KeyRound, phase: 5, ready: true, visible: (c) => can(c, 'apikey.manage') },

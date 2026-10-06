@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { getPosition, isGeoError } from './geo';
 import { IdentityDialog } from './identity-dialog';
 import { TimeRequestDialog } from './request-dialog';
-import { ApprovalPill, ShiftChip, useDuration, useNow, useRequestSummary } from './shared';
+import { ApprovalPill, useDuration, useNow, useRequestSummary } from './shared';
 import { absenceTone, dayNum, fromDateStr, shiftMinutes, shiftRange, spanTitle, timeOf, todayStr, weekdayShort } from './time-utils';
 
 export const absenceIcon: Record<AbsenceKind, typeof Palmtree> = {
@@ -640,4 +640,3 @@ export function MyTimePage() {
   );
 }
 
-export { ShiftChip };

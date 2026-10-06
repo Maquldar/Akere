@@ -10,7 +10,7 @@ import { FormField } from '@/components/ui/label';
 import { toast } from '@/components/ui/toaster';
 import { useApprovePlans } from '@/lib/api/hooks/requests';
 import type { PlanRow, VacationBulkResult } from '@/lib/api/types-requests';
-import { useRequestErrorText } from '../shared';
+import { useBulkReasonText, useRequestErrorText } from '../shared';
 
 /** "Согласование: Выбрано для согласования: 8, Из них можно согласовать: 7" (deck p31), then the results. */
 export function ApproveDialog({
@@ -29,6 +29,7 @@ export function ApproveDialog({
   const t = useTranslations('vacation.approve');
   const tc = useTranslations('common');
   const errorText = useRequestErrorText();
+  const reasonText = useBulkReasonText();
   const approve = useApprovePlans(campaignId);
   const [comment, setComment] = useState('');
   const [commentError, setCommentError] = useState<string | null>(null);
@@ -93,7 +94,7 @@ export function ApproveDialog({
                   const id = f.employeeId ?? f.id ?? '';
                   return (
                     <li key={i}>
-                      <span className="font-medium text-fg">{names.get(id) ?? id}</span>: <span className="text-fg-muted">{f.reason}</span>
+                      <span className="font-medium text-fg">{names.get(id) ?? id}</span>: <span className="text-fg-muted">{reasonText(f.reason)}</span>
                     </li>
                   );
                 })}

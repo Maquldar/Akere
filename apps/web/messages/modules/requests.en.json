@@ -1,13 +1,33 @@
 {
   "requests": {
-    "status": { "DRAFT": "Draft", "IN_APPROVAL": "In approval", "REWORK": "Needs rework", "ORDER_SIGNING": "Order signing", "COMPLETED": "Completed", "REJECTED": "Rejected", "CANCELLED": "Cancelled" },
-    "docStatus": { "DRAFT": "Draft", "IN_ROUTE": "In route", "REWORK": "Needs rework", "COMPLETED": "Completed", "REJECTED": "Rejected", "CANCELLED": "Cancelled" },
+    "status": {
+      "DRAFT": "Draft",
+      "IN_APPROVAL": "In approval",
+      "REWORK": "Needs rework",
+      "ORDER_SIGNING": "Order signing",
+      "COMPLETED": "Completed",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
+    "docStatus": {
+      "DRAFT": "Draft",
+      "IN_ROUTE": "In route",
+      "REWORK": "Needs rework",
+      "COMPLETED": "Completed",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
     "popular": {
       "title": "Popular services",
       "allRequests": "All requests",
       "balance": "{days} days accrued",
       "moreTypes": "Other request types: {count}",
-      "tiles": { "ANNUAL_LEAVE": "Request vacation", "BUSINESS_TRIP": "Request a business trip", "UNPAID_LEAVE": "Unpaid leave", "CERTIFICATE": "Employment certificate" }
+      "tiles": {
+        "ANNUAL_LEAVE": "Request vacation",
+        "BUSINESS_TRIP": "Request a business trip",
+        "UNPAID_LEAVE": "Unpaid leave",
+        "CERTIFICATE": "Employment certificate"
+      }
     },
     "my": {
       "title": "My requests",
@@ -72,13 +92,35 @@
       "notEditable": "This request cannot be edited",
       "notEditableHint": "Only drafts and requests returned for rework can be edited."
     },
-    "pdf": { "download": "Download PDF", "unavailable": "The document cannot be displayed" },
+    "pdf": {
+      "download": "Download PDF",
+      "unavailable": "The document cannot be displayed"
+    },
     "route": {
       "noSteps": "The route has not started yet",
-      "pending": { "APPROVE": "Awaiting approval", "SIGN": "Awaiting signature", "ACKNOWLEDGE": "Awaiting acknowledgment" },
-      "done": { "APPROVE": "Approved", "SIGN": "Signed", "ACKNOWLEDGE": "Acknowledged" },
-      "status": { "WAITING": "Queued", "PENDING": "In progress", "DONE": "Done", "REJECTED": "Rejected", "RETURNED": "Returned for rework", "SKIPPED": "Skipped" },
-      "action": { "APPROVE": "Approval", "SIGN": "Signing", "ACKNOWLEDGE": "Acknowledgment" },
+      "pending": {
+        "APPROVE": "Awaiting approval",
+        "SIGN": "Awaiting signature",
+        "ACKNOWLEDGE": "Awaiting acknowledgment"
+      },
+      "done": {
+        "APPROVE": "Approved",
+        "SIGN": "Signed",
+        "ACKNOWLEDGE": "Acknowledged"
+      },
+      "status": {
+        "WAITING": "Queued",
+        "PENDING": "In progress",
+        "DONE": "Done",
+        "REJECTED": "Rejected",
+        "RETURNED": "Returned for rework",
+        "SKIPPED": "Skipped"
+      },
+      "action": {
+        "APPROVE": "Approval",
+        "SIGN": "Signing",
+        "ACKNOWLEDGE": "Acknowledgment"
+      },
       "viewed": "Viewed {at}",
       "due": "Due: {at}",
       "actedBy": "Done by: {name}"
@@ -108,12 +150,22 @@
       "number": "No. {number}",
       "created": "dated {date}",
       "waitingFor": "waiting for: {name}",
-      "yourTurn": { "APPROVE": "Your approval: review the application and decide.", "SIGN": "Your digital signature is required.", "ACKNOWLEDGE": "Please acknowledge the order." },
+      "yourTurn": {
+        "APPROVE": "Your approval: review the application and decide.",
+        "SIGN": "Your digital signature is required.",
+        "ACKNOWLEDGE": "Please acknowledge the order."
+      },
       "open": "Open document",
       "pdf": "PDF",
       "signedPdf": "Signed PDF"
     },
-    "stages": { "label": "Request stages", "submitted": "Submitted", "approval": "Manager and HR", "order": "Order", "done": "Completed" },
+    "stages": {
+      "label": "Request stages",
+      "submitted": "Submitted",
+      "approval": "Manager and HR",
+      "order": "Order",
+      "done": "Completed"
+    },
     "detail": {
       "title": "Request",
       "dataTitle": "Request details",
@@ -173,7 +225,15 @@
       "forbidden": "You do not have permission for this action.",
       "fileTooLarge": "The file is larger than 25 MB.",
       "unsupportedFile": "Unsupported file type. Allowed: PDF, DOC, DOCX, JPG, PNG, HEIC.",
-      "validation": "Please check the fields."
+      "validation": "Please check the fields.",
+      "exceedsEntitlement": "More days are planned than the entitlement.",
+      "minPart14": "One part of the leave must be at least 14 calendar days.",
+      "planLocked": "The plan is approved — contact your manager or HR to change it.",
+      "campaignNotActive": "Planning for this campaign is closed.",
+      "emptyPlan": "Add at least one period before submitting.",
+      "periodOutsideYear": "Periods must fall within the campaign year.",
+      "invalidPeriod": "The end date is before the start date.",
+      "commentRequired": "Please add a comment."
     }
   },
   "vacation": {
@@ -199,9 +259,23 @@
     "closeTitle": "Close planning?",
     "closeText": "Plans for {year} can no longer be changed.",
     "reminderHint": "Two weeks before an approved vacation starts, the system reminds the employee and their manager.",
-    "totals": { "employees": "Employees", "submitted": "Submitted a plan", "approved": "Approved" },
-    "campaignStatus": { "DRAFT": "Draft", "ACTIVE": "Active", "CLOSED": "Closed" },
-    "planStatus": { "NONE": "Not filled", "DRAFT": "Draft", "SUBMITTED": "In approval", "APPROVED": "Approved", "REJECTED": "Rejected" },
+    "totals": {
+      "employees": "Employees",
+      "submitted": "Submitted a plan",
+      "approved": "Approved"
+    },
+    "campaignStatus": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "CLOSED": "Closed"
+    },
+    "planStatus": {
+      "NONE": "Not filled",
+      "DRAFT": "Draft",
+      "SUBMITTED": "In approval",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    },
     "campaign": {
       "title": "New planning campaign",
       "description": "Employees enter their vacation dates, managers approve the plans.",
@@ -270,7 +344,9 @@
       "approvedToast": "Plan approved",
       "rejectedToast": "Plan rejected",
       "approvedLocked": "The plan is approved and cannot be edited.",
-      "campaignNotActive": "Planning is closed — changes are not available."
+      "campaignNotActive": "Planning is closed — changes are not available.",
+      "rejectComment": "Reason for rejection",
+      "commentRequired": "Please give a reason"
     },
     "grid": {
       "title": "Vacations by month",
@@ -312,7 +388,13 @@
       "succeeded": "{count, plural, one {# plan processed} other {# plans processed}}",
       "failed": "{count, plural, one {# plan not processed} other {# plans not processed}}",
       "approvedToast": "{count, plural, one {# plan approved} other {# plans approved}}",
-      "rejectedToast": "{count, plural, one {# plan rejected} other {# plans rejected}}"
+      "rejectedToast": "{count, plural, one {# plan rejected} other {# plans rejected}}",
+      "reasons": {
+        "outOfScope": "outside your approval scope",
+        "noPlan": "no plan filled in",
+        "notSubmitted": "the plan has not been submitted",
+        "notSubmittedStatus": "plan status: {status}"
+      }
     }
   }
 }

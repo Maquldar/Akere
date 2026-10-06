@@ -1,13 +1,33 @@
 {
   "requests": {
-    "status": { "DRAFT": "Жоба", "IN_APPROVAL": "Келісуде", "REWORK": "Пысықтауда", "ORDER_SIGNING": "Бұйрыққа қол қою", "COMPLETED": "Орындалды", "REJECTED": "Қабылданбады", "CANCELLED": "Бас тартылды" },
-    "docStatus": { "DRAFT": "Жоба", "IN_ROUTE": "Бағытта", "REWORK": "Пысықтау қажет", "COMPLETED": "Аяқталды", "REJECTED": "Қабылданбады", "CANCELLED": "Бас тартылды" },
+    "status": {
+      "DRAFT": "Жоба",
+      "IN_APPROVAL": "Келісуде",
+      "REWORK": "Пысықтауда",
+      "ORDER_SIGNING": "Бұйрыққа қол қою",
+      "COMPLETED": "Орындалды",
+      "REJECTED": "Қабылданбады",
+      "CANCELLED": "Бас тартылды"
+    },
+    "docStatus": {
+      "DRAFT": "Жоба",
+      "IN_ROUTE": "Бағытта",
+      "REWORK": "Пысықтау қажет",
+      "COMPLETED": "Аяқталды",
+      "REJECTED": "Қабылданбады",
+      "CANCELLED": "Бас тартылды"
+    },
     "popular": {
       "title": "Танымал қызметтер",
       "allRequests": "Барлық өтінімдер",
       "balance": "{days} күн жиналды",
       "moreTypes": "Өтінімнің басқа түрлері: {count}",
-      "tiles": { "ANNUAL_LEAVE": "Демалыс рәсімдеу", "BUSINESS_TRIP": "Іссапар рәсімдеу", "UNPAID_LEAVE": "Жалақысыз демалыс", "CERTIFICATE": "Жұмыс орнынан анықтама" }
+      "tiles": {
+        "ANNUAL_LEAVE": "Демалыс рәсімдеу",
+        "BUSINESS_TRIP": "Іссапар рәсімдеу",
+        "UNPAID_LEAVE": "Жалақысыз демалыс",
+        "CERTIFICATE": "Жұмыс орнынан анықтама"
+      }
     },
     "my": {
       "title": "Менің өтінімдерім",
@@ -72,13 +92,35 @@
       "notEditable": "Өтінімді өзгертуге болмайды",
       "notEditableHint": "Тек жобаны немесе пысықтауға қайтарылған өтінімді өңдеуге болады."
     },
-    "pdf": { "download": "PDF жүктеу", "unavailable": "Құжатты қарау мүмкін емес" },
+    "pdf": {
+      "download": "PDF жүктеу",
+      "unavailable": "Құжатты қарау мүмкін емес"
+    },
     "route": {
       "noSteps": "Бағыт әлі басталмаған",
-      "pending": { "APPROVE": "Келісу күтілуде", "SIGN": "Қол қою күтілуде", "ACKNOWLEDGE": "Танысу күтілуде" },
-      "done": { "APPROVE": "Келісілді", "SIGN": "Қол қойылды", "ACKNOWLEDGE": "Танысты" },
-      "status": { "WAITING": "Кезекте", "PENDING": "Жұмыста", "DONE": "Орындалды", "REJECTED": "Қабылданбады", "RETURNED": "Пысықтауға қайтарылды", "SKIPPED": "Өткізіліп жіберілді" },
-      "action": { "APPROVE": "Келісу", "SIGN": "Қол қою", "ACKNOWLEDGE": "Танысу" },
+      "pending": {
+        "APPROVE": "Келісу күтілуде",
+        "SIGN": "Қол қою күтілуде",
+        "ACKNOWLEDGE": "Танысу күтілуде"
+      },
+      "done": {
+        "APPROVE": "Келісілді",
+        "SIGN": "Қол қойылды",
+        "ACKNOWLEDGE": "Танысты"
+      },
+      "status": {
+        "WAITING": "Кезекте",
+        "PENDING": "Жұмыста",
+        "DONE": "Орындалды",
+        "REJECTED": "Қабылданбады",
+        "RETURNED": "Пысықтауға қайтарылды",
+        "SKIPPED": "Өткізіліп жіберілді"
+      },
+      "action": {
+        "APPROVE": "Келісу",
+        "SIGN": "Қол қою",
+        "ACKNOWLEDGE": "Танысу"
+      },
       "viewed": "Қаралды: {at}",
       "due": "Мерзімі: {at}",
       "actedBy": "Орындаған: {name}"
@@ -108,12 +150,22 @@
       "number": "№ {number}",
       "created": "{date} бастап",
       "waitingFor": "күтуде: {name}",
-      "yourTurn": { "APPROVE": "Сіздің келісуіңіз: өтінішті тексеріп, шешім қабылдаңыз.", "SIGN": "Сіздің ЭЦҚ қолыңыз қажет.", "ACKNOWLEDGE": "Бұйрықпен танысыңыз." },
+      "yourTurn": {
+        "APPROVE": "Сіздің келісуіңіз: өтінішті тексеріп, шешім қабылдаңыз.",
+        "SIGN": "Сіздің ЭЦҚ қолыңыз қажет.",
+        "ACKNOWLEDGE": "Бұйрықпен танысыңыз."
+      },
       "open": "Құжатты ашу",
       "pdf": "PDF құжаты",
       "signedPdf": "Қол қойылған PDF"
     },
-    "stages": { "label": "Өтінім кезеңдері", "submitted": "Өтінім берілді", "approval": "Басшы және HR", "order": "Бұйрық", "done": "Орындалды" },
+    "stages": {
+      "label": "Өтінім кезеңдері",
+      "submitted": "Өтінім берілді",
+      "approval": "Басшы және HR",
+      "order": "Бұйрық",
+      "done": "Орындалды"
+    },
     "detail": {
       "title": "Өтінім",
       "dataTitle": "Өтінім деректері",
@@ -173,7 +225,15 @@
       "forbidden": "Бұл әрекетке құқығыңыз жеткіліксіз.",
       "fileTooLarge": "Файл 25 МБ-тан үлкен.",
       "unsupportedFile": "Файл түріне рұқсат жоқ. Рұқсат етілген: PDF, DOC, DOCX, JPG, PNG, HEIC.",
-      "validation": "Өрістердің толтырылуын тексеріңіз."
+      "validation": "Өрістердің толтырылуын тексеріңіз.",
+      "exceedsEntitlement": "Тиесілі демалыс күндерінен көп жоспарланды.",
+      "minPart14": "Демалыстың бір бөлігі кемінде 14 күнтізбелік күн болуы тиіс.",
+      "planLocked": "Жоспар бекітілді — өзгерту үшін басшыға немесе кадр бөліміне хабарласыңыз.",
+      "campaignNotActive": "Бұл науқан бойынша жоспарлау жабық.",
+      "emptyPlan": "Жіберу алдында кемінде бір кезең қосыңыз.",
+      "periodOutsideYear": "Кезеңдер науқан жылы шегінде болуы тиіс.",
+      "invalidPeriod": "Аяқталу күні басталу күнінен ерте.",
+      "commentRequired": "Түсініктеме жазыңыз."
     }
   },
   "vacation": {
@@ -199,9 +259,23 @@
     "closeTitle": "Жоспарлауды аяқтайсыз ба?",
     "closeText": "{year} жылғы жоспарларды өзгерту қолжетімсіз болады.",
     "reminderHint": "Бекітілген демалыс басталуына 2 апта қалғанда жүйе қызметкер мен басшыға еске салады.",
-    "totals": { "employees": "Қызметкерлер", "submitted": "Жоспар жіберді", "approved": "Бекітілді" },
-    "campaignStatus": { "DRAFT": "Жоба", "ACTIVE": "Белсенді", "CLOSED": "Аяқталды" },
-    "planStatus": { "NONE": "Толтырылмаған", "DRAFT": "Жоба", "SUBMITTED": "Келісуде", "APPROVED": "Бекітілді", "REJECTED": "Қабылданбады" },
+    "totals": {
+      "employees": "Қызметкерлер",
+      "submitted": "Жоспар жіберді",
+      "approved": "Бекітілді"
+    },
+    "campaignStatus": {
+      "DRAFT": "Жоба",
+      "ACTIVE": "Белсенді",
+      "CLOSED": "Аяқталды"
+    },
+    "planStatus": {
+      "NONE": "Толтырылмаған",
+      "DRAFT": "Жоба",
+      "SUBMITTED": "Келісуде",
+      "APPROVED": "Бекітілді",
+      "REJECTED": "Қабылданбады"
+    },
     "campaign": {
       "title": "Жаңа жоспарлау науқаны",
       "description": "Қызметкерлер демалыс күндерін енгізеді, басшылар жоспарларды келіседі.",
@@ -270,7 +344,9 @@
       "approvedToast": "Жоспар келісілді",
       "rejectedToast": "Жоспар қабылданбады",
       "approvedLocked": "Жоспар бекітілді және өңделмейді.",
-      "campaignNotActive": "Жоспарлау жабық — өзгерістер қолжетімсіз."
+      "campaignNotActive": "Жоспарлау жабық — өзгерістер қолжетімсіз.",
+      "rejectComment": "Қабылдамау себебі",
+      "commentRequired": "Себебін көрсетіңіз"
     },
     "grid": {
       "title": "Айлар бойынша демалыстар",
@@ -312,7 +388,13 @@
       "succeeded": "{count, plural, other {# жоспар өңделді}}",
       "failed": "{count, plural, other {# жоспар өңделмеді}}",
       "approvedToast": "{count, plural, other {# жоспар келісілді}}",
-      "rejectedToast": "{count, plural, other {# жоспар қабылданбады}}"
+      "rejectedToast": "{count, plural, other {# жоспар қабылданбады}}",
+      "reasons": {
+        "outOfScope": "сіздің келісу аймағыңыздан тыс",
+        "noPlan": "жоспар толтырылмаған",
+        "notSubmitted": "жоспар келісуге жіберілмеген",
+        "notSubmittedStatus": "жоспар мәртебесі: {status}"
+      }
     }
   }
 }

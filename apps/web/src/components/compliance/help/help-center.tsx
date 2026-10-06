@@ -14,7 +14,7 @@ import { useHelpArticles } from '@/lib/api/hooks/compliance';
 import { HELP_CATEGORIES, type HelpArticle } from '@/lib/api/types-compliance';
 import { useDebounced } from '@/lib/hooks/use-debounced';
 import { cn } from '@/lib/utils';
-import { excerpt } from './markdown';
+import { excerpt } from './excerpt';
 
 const ALL = 'all';
 

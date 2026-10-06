@@ -118,6 +118,21 @@ export function formatDays(n: number, locale: string): string {
   return new Intl.NumberFormat(locale === 'kk' ? 'kk-KZ' : locale === 'en' ? 'en-GB' : 'ru-RU', { maximumFractionDigits: 2 }).format(n);
 }
 
+/** Bulk-approval failure codes (OUT_OF_SCOPE, NO_PLAN, NOT_SUBMITTED:<status>) as text. */
+export function useBulkReasonText() {
+  const t = useTranslations('vacation.approve.reasons');
+  const tp = useTranslations('vacation.planStatus');
+  return (reason: string): string => {
+    if (reason === 'OUT_OF_SCOPE') return t('outOfScope');
+    if (reason === 'NO_PLAN') return t('noPlan');
+    if (reason.startsWith('NOT_SUBMITTED')) {
+      const st = reason.split(':')[1] as PlanStatus | undefined;
+      return st && ['NONE', 'DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED'].includes(st) ? t('notSubmittedStatus', { status: tp(st) }) : t('notSubmitted');
+    }
+    return reason;
+  };
+}
+
 // ── Business-rule errors ──
 
 type Overlap = { label?: string; startDate?: string; endDate?: string };
@@ -153,6 +168,22 @@ export function useRequestErrorText() {
           return t('noEmployee');
         case 'TYPE_LOCKED':
           return t('typeLocked');
+        case 'EXCEEDS_ENTITLEMENT':
+          return t('exceedsEntitlement');
+        case 'MIN_PART_14':
+          return t('minPart14');
+        case 'PLAN_LOCKED':
+          return t('planLocked');
+        case 'CAMPAIGN_NOT_ACTIVE':
+          return t('campaignNotActive');
+        case 'EMPTY_PLAN':
+          return t('emptyPlan');
+        case 'PERIOD_OUTSIDE_YEAR':
+          return t('periodOutsideYear');
+        case 'INVALID_PERIOD':
+          return t('invalidPeriod');
+        case 'COMMENT_REQUIRED':
+          return t('commentRequired');
         default:
           return e.message;
       }

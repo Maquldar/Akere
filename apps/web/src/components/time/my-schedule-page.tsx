@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 import { absenceIcon, requestIcon, WeekTiles } from './my-time-page';
 import { TimeRequestDialog } from './request-dialog';
 import { ApprovalPill, PeriodNav, ShiftChip, useDuration, useRequestSummary, useTabParam } from './shared';
-import { absenceTone, addDays, dayNum, monthEnd, monthTitle, todayStr, weekDays, weekdayShort, weekStart, weekTitle } from './time-utils';
+import { absenceTone, addDays, monthEnd, monthTitle, todayStr, weekDays, weekdayShort, weekStart, weekTitle } from './time-utils';
 import { WeekGrid } from './week-grid';
 
 const TABS = ['hours', 'team', 'requests'] as const;
@@ -430,4 +430,3 @@ export function MySchedulePage() {
   );
 }
 
-export { dayNum };
