@@ -356,6 +356,8 @@ model User {
   failedLogins     Int       @default(0)
   lockedUntil      DateTime?
   lastLoginAt      DateTime?
+  demoListed       Boolean   @default(false) // shown on the login page when DEMO_MODE=true
+  demoOrder        Int       @default(0)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

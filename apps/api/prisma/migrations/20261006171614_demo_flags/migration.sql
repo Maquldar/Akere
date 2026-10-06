@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "demoListed" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "demoOrder" INTEGER NOT NULL DEFAULT 0;
