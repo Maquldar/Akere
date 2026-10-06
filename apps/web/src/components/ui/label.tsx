@@ -4,7 +4,6 @@ import { Label as LabelPrimitive } from 'radix-ui';
 import {
   cloneElement, isValidElement, useId, type ComponentPropsWithoutRef, type ReactElement, type ReactNode,
 } from 'react';
-import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
 export function Label({
@@ -13,17 +12,14 @@ export function Label({
   children,
   ...props
 }: ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & { required?: boolean }) {
-  const t = useTranslations('common');
   return (
     <LabelPrimitive.Root className={cn('text-[13px] font-medium text-fg', className)} {...props}>
       {children}
+      {/* Required state is announced via aria-required on the control (FormField). */}
       {required && (
-        <>
-          <span className="ml-0.5 text-red-fg" aria-hidden>
-            *
-          </span>
-          <span className="sr-only"> ({t('required')})</span>
-        </>
+        <span className="ml-0.5 text-red-fg" aria-hidden>
+          *
+        </span>
       )}
     </LabelPrimitive.Root>
   );

@@ -53,7 +53,7 @@ export function DemoAccounts() {
   };
 
   return (
-    <section aria-labelledby="demo-title" className="rounded-xl border border-dashed border-border-strong bg-surface-muted p-4">
+    <section aria-labelledby="demo-title" className="min-w-0 rounded-xl border border-dashed border-border-strong bg-surface-muted p-4">
       <div className="mb-3 flex items-start gap-2">
         <FlaskConical className="mt-0.5 size-4 shrink-0 text-fg-subtle" aria-hidden />
         <div>
@@ -63,7 +63,7 @@ export function DemoAccounts() {
           <p className="text-xs text-fg-subtle">{t('hint')}</p>
         </div>
       </div>
-      <ul className="grid gap-2">
+      <ul className="grid grid-cols-1 gap-2">
         {sorted.map((u) => {
           const role = primaryRole(u.roles);
           const busy = pendingId === u.id;
@@ -85,13 +85,9 @@ export function DemoAccounts() {
                   <span className="block truncate text-[13px] font-medium text-fg">{u.fullName}</span>
                   {u.position && <span className="block truncate text-xs text-fg-subtle">{u.position}</span>}
                 </span>
-                <span className="flex shrink-0 flex-wrap justify-end gap-1">
-                  {u.roles.map((r) => (
-                    <Badge key={r} tone={roleTone[r]}>
-                      {tr(r)}
-                    </Badge>
-                  ))}
-                </span>
+                <Badge tone={roleTone[role]} className="shrink-0">
+                  {tr(role)}
+                </Badge>
               </button>
             </li>
           );

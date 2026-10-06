@@ -1,6 +1,7 @@
 import { isApiError } from './api/errors';
 
-type T = (key: string, values?: Record<string, string | number>) => string;
+type AuthErrorKey = 'generic' | 'network' | 'invalidCredentials' | 'rateLimited' | 'rateLimitedFor' | 'forbidden';
+type T = (key: AuthErrorKey, values?: Record<string, string | number>) => string;
 
 /**
  * User-facing message for auth endpoint errors. `t` is scoped to the `auth.errors` namespace.

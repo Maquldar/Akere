@@ -138,7 +138,7 @@ export function LegalEntitiesTab() {
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={t('editNamed', { name: row.original.name })}
+            aria-label={tc('editNamed', { name: row.original.name })}
             onClick={() => {
               setEditing(row.original);
               setOpen(true);

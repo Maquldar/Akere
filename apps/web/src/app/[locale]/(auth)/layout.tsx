@@ -1,4 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
+import { isAppLocale } from '@/i18n/routing';
 import { Suspense, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Logo } from '@/components/shell/logo';
@@ -11,7 +12,7 @@ function Footer() {
 
 export default async function AuthLayout({ children, params }: { children: ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  setRequestLocale(locale);
+  setRequestLocale(isAppLocale(locale) ? locale : 'ru');
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">
       <header className="flex h-16 items-center justify-between px-4 sm:px-6">

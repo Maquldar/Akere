@@ -1,12 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import { seedOrg } from './org';
+import { seedCandidates } from './candidates';
 
 const prisma = new PrismaClient();
 
 /** Seeders run in order; each receives the context produced by the previous ones. Later phases append here. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Seeder = (prisma: PrismaClient, ctx: any) => Promise<object>;
-const seeders: Seeder[] = [seedOrg];
+const seeders: Seeder[] = [seedOrg, seedCandidates];
 
 async function truncateAll() {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
