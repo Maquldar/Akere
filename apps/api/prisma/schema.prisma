@@ -1,0 +1,1261 @@
+// Akere HR — single source of the data model.
+// Every tenant-owned table carries tenantId; services always filter by it.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Role {
+  ADMIN
+  HR
+  MANAGER
+  EMPLOYEE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum ContactChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum SubjectType {
+  USER
+  CANDIDATE
+}
+
+enum OtpPurpose {
+  LOGIN_2FA
+  PASSWORD_RESET
+  CANDIDATE_LOGIN
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  TERMINATED
+}
+
+enum CandidateStatus {
+  NEW
+  IN_PROGRESS
+  ACCEPTED
+  EXPORTED
+  BLOCKED
+}
+
+enum InvitationStatus {
+  NONE
+  SENT
+  ACCEPTED
+}
+
+enum DocRequestStatus {
+  NONE
+  SENT
+  FILLING
+  UPLOADED
+  COMPLETED
+  RETURNED
+}
+
+enum CandidateCheck {
+  NONE
+  ON_REVIEW
+  RECOMMENDED
+  CONDITIONAL
+  NOT_RECOMMENDED
+}
+
+enum CandidateDocStatus {
+  PENDING
+  FILLED
+  ACCEPTED
+  RETURNED
+}
+
+enum ConsentStatus {
+  NONE
+  REQUESTED
+  GRANTED
+  DENIED
+}
+
+enum DocumentKind {
+  GENERIC
+  CONTRACT
+  SUPPLEMENTARY
+  ORDER
+  APPLICATION
+  VND
+  ARCHIVE
+}
+
+enum DocumentStatus {
+  DRAFT
+  IN_ROUTE
+  REWORK
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum StepAction {
+  APPROVE
+  SIGN
+  ACKNOWLEDGE
+}
+
+enum StepStatus {
+  WAITING // not yet reached
+  PENDING // active, waiting for the assignee
+  DONE
+  REJECTED
+  RETURNED
+  SKIPPED
+}
+
+enum AssigneeRule {
+  USER
+  ROLE_HR
+  MANAGER_OF_SUBJECT
+  SUBJECT
+  SIGNATORY
+  AUTHOR
+}
+
+enum SignMethod {
+  EGOV_MOBILE
+  EGOV_BUSINESS
+  NCALAYER
+  PAPER
+  CLICK // simple approval without ЭЦП (APPROVE steps)
+}
+
+enum SigningSessionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum EsutdStatus {
+  NOT_SENT
+  QUEUED
+  SENT
+  ERROR
+}
+
+enum RequestStatus {
+  DRAFT
+  IN_APPROVAL
+  REWORK
+  ORDER_SIGNING
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum AbsenceKind {
+  VACATION
+  UNPAID
+  SICK
+  BUSINESS_TRIP
+  OTHER
+}
+
+enum AbsenceSource {
+  REQUEST
+  SICK_LEAVE
+  MANUAL
+}
+
+enum LedgerType {
+  ACCRUAL
+  USAGE
+  ADJUSTMENT
+}
+
+enum HolidayKind {
+  HOLIDAY
+  TRANSFER_DAY_OFF
+  TRANSFER_WORKDAY
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum PlanStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum VndRecipientStatus {
+  PENDING
+  ACKNOWLEDGED
+}
+
+enum SickLeaveSource {
+  MANUAL
+  ELECTRONIC
+}
+
+enum ShiftStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum TimeMarkType {
+  IN
+  BREAK_START
+  BREAK_END
+  OUT
+}
+
+enum VerificationStatus {
+  PASSED
+  FAILED
+  SKIPPED
+}
+
+enum MarkSource {
+  SELF
+  CORRECTION
+}
+
+enum TimeRequestKind {
+  CORRECTION
+  DAY_OFF_WORK
+  SUBSTITUTION
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OutboxStatus {
+  SENT
+  FAILED
+}
+
+// ───────────────────────────── Org structure ─────────────────────────────
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  legalEntities LegalEntity[]
+  users         User[]
+}
+
+model LegalEntity {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String
+  nameKk       String?
+  bin          String // 12-digit БИН
+  address      String?
+  directorName String?
+  createdAt    DateTime @default(now())
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  departments Department[]
+  employees   Employee[]
+  candidates  Candidate[]
+  documents   Document[]
+  roles       RoleAssignment[]
+
+  @@unique([tenantId, bin])
+  @@index([tenantId])
+}
+
+model Department {
+  id            String   @id @default(cuid())
+  tenantId      String
+  legalEntityId String
+  parentId      String?
+  name          String
+  nameKk        String?
+  createdAt     DateTime @default(now())
+
+  legalEntity LegalEntity  @relation(fields: [legalEntityId], references: [id], onDelete: Cascade)
+  parent      Department?  @relation("DeptTree", fields: [parentId], references: [id])
+  children    Department[] @relation("DeptTree")
+  employees   Employee[]
+  candidates  Candidate[]
+
+  @@index([tenantId])
+  @@index([legalEntityId])
+}
+
+model Position {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  nameKk    String?
+  createdAt DateTime @default(now())
+
+  employees  Employee[]
+  candidates Candidate[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model WorkLocation {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  address   String?
+  lat       Float
+  lng       Float
+  radiusM   Int      @default(200)
+  createdAt DateTime @default(now())
+
+  employees      Employee[]
+  shiftTemplates ShiftTemplate[]
+  shifts         Shift[]
+
+  @@index([tenantId])
+}
+
+// ───────────────────────────── Identity ─────────────────────────────
+
+model User {
+  id               String    @id @default(cuid())
+  tenantId         String
+  email            String    @unique
+  phone            String?   @unique
+  passwordHash     String?
+  firstName        String
+  lastName         String
+  middleName       String?
+  locale           String    @default("ru")
+  isActive         Boolean   @default(true)
+  twoFactorEnabled Boolean   @default(false)
+  failedLogins     Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roles         RoleAssignment[]
+  employee      Employee?
+  sessions      Session[]
+  key           UserKey?
+  notifications Notification[]
+  deputiesGiven Deputy[]         @relation("DeputyPrincipal")
+  deputyFor     Deputy[]         @relation("DeputyDeputy")
+
+  @@index([tenantId])
+}
+
+model RoleAssignment {
+  id            String  @id @default(cuid())
+  userId        String
+  role          Role
+  legalEntityId String? // scope; null = all legal entities of the tenant
+  canSign       Boolean @default(false) // signing authority for the legal entity
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  legalEntity LegalEntity? @relation(fields: [legalEntityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role, legalEntityId])
+  @@index([userId])
+}
+
+model Session {
+  id          String      @id @default(cuid())
+  tokenHash   String      @unique
+  subjectType SubjectType
+  userId      String?
+  candidateId String?
+  pending2fa  Boolean     @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime    @default(now())
+  ip          String?
+  userAgent   String?
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidate Candidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([candidateId])
+  @@index([expiresAt])
+}
+
+model OtpCode {
+  id          String     @id @default(cuid())
+  purpose     OtpPurpose
+  target      String // email or phone the code was sent to
+  codeHash    String
+  userId      String?
+  candidateId String?
+  attempts    Int        @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime   @default(now())
+
+  @@index([target, purpose])
+}
+
+model UserKey {
+  userId        String   @id
+  publicKeyPem  String
+  encPrivateKey String // AES-256-GCM ciphertext (base64)
+  iv            String
+  tag           String
+  pinHash       String // argon2 hash of the signing PIN (NCALayer sandbox)
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Deputy {
+  id              String   @id @default(cuid())
+  tenantId        String
+  principalUserId String
+  deputyUserId    String
+  startDate       DateTime @db.Date
+  endDate         DateTime @db.Date
+  createdAt       DateTime @default(now())
+
+  principal User @relation("DeputyPrincipal", fields: [principalUserId], references: [id], onDelete: Cascade)
+  deputy    User @relation("DeputyDeputy", fields: [deputyUserId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([principalUserId])
+  @@index([deputyUserId])
+}
+
+// ───────────────────────────── Employees ─────────────────────────────
+
+model Employee {
+  id                  String         @id @default(cuid())
+  tenantId            String
+  userId              String         @unique
+  legalEntityId       String
+  departmentId        String?
+  positionId          String?
+  managerId           String?
+  locationId          String?
+  tabNumber           String
+  iin                 String?
+  birthDate           DateTime?      @db.Date
+  gender              Gender?
+  hireDate            DateTime       @db.Date
+  terminationDate     DateTime?      @db.Date
+  status              EmployeeStatus @default(ACTIVE)
+  vacationDaysPerYear Int            @default(24)
+  personal            Json           @default("{}") // address, citizenship, education… from onboarding
+  photoFileId         String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  legalEntity  LegalEntity   @relation(fields: [legalEntityId], references: [id])
+  department   Department?   @relation(fields: [departmentId], references: [id])
+  position     Position?     @relation(fields: [positionId], references: [id])
+  manager      Employee?     @relation("ManagerTree", fields: [managerId], references: [id])
+  reports      Employee[]    @relation("ManagerTree")
+  location     WorkLocation? @relation(fields: [locationId], references: [id])
+  candidate    Candidate?
+  documents    Document[]
+  requests     Request[]
+  absences     Absence[]
+  ledger       VacationLedger[]
+  vacationPlans VacationPlan[]
+  vndRecipients VndRecipient[]
+  sickLeaves   SickLeave[]
+  shifts       Shift[]
+  timeMarks    TimeMark[]
+  timeRequests TimeRequest[]   @relation("TimeRequestEmployee")
+  shiftClaims  OpenShiftClaim[]
+
+  @@unique([tenantId, tabNumber])
+  @@index([tenantId, status])
+  @@index([legalEntityId])
+  @@index([departmentId])
+  @@index([managerId])
+}
+
+// ───────────────────────────── Candidate onboarding ─────────────────────────────
+
+model PersonalDocType {
+  id           String   @id @default(cuid())
+  tenantId     String? // null = system catalogue shared by all tenants
+  code         String
+  name         String
+  nameKk       String?
+  fields       Json // [{key,label,labelKk,type,required,options?}]
+  autoFillable Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  templateItems RequestTemplateItem[]
+  documents     CandidateDocument[]
+
+  @@unique([tenantId, code])
+}
+
+model QuestionnaireTemplate {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  fields    Json // [{key,label,type,required,options?}]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requestTemplates RequestTemplate[]
+
+  @@index([tenantId])
+}
+
+model RequestTemplate {
+  id                      String   @id @default(cuid())
+  tenantId                String
+  name                    String
+  questionnaireTemplateId String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  questionnaire QuestionnaireTemplate? @relation(fields: [questionnaireTemplateId], references: [id], onDelete: SetNull)
+  items         RequestTemplateItem[]
+  requests      DocumentRequest[]
+
+  @@index([tenantId])
+}
+
+model RequestTemplateItem {
+  id                String  @id @default(cuid())
+  requestTemplateId String
+  personalDocTypeId String
+  required          Boolean @default(true)
+  fieldKeys         Json // subset of the doc type's field keys to fill; [] = all
+  sortOrder         Int     @default(0)
+
+  template RequestTemplate @relation(fields: [requestTemplateId], references: [id], onDelete: Cascade)
+  docType  PersonalDocType @relation(fields: [personalDocTypeId], references: [id])
+
+  @@unique([requestTemplateId, personalDocTypeId])
+}
+
+model Candidate {
+  id                String           @id @default(cuid())
+  tenantId          String
+  legalEntityId     String
+  departmentId      String?
+  positionId        String?
+  lastName          String
+  firstName         String
+  middleName        String?
+  iin               String?
+  noIin             Boolean          @default(false)
+  birthDate         DateTime?        @db.Date
+  gender            Gender?
+  channels          ContactChannel[]
+  email             String?
+  phone             String?
+  comment           String?
+  tags              String[]
+  responsibleUserId String?
+  status            CandidateStatus  @default(NEW)
+  invitationStatus  InvitationStatus @default(NONE)
+  docRequestStatus  DocRequestStatus @default(NONE)
+  checkStatus       CandidateCheck   @default(NONE)
+  plannedHireDate   DateTime?        @db.Date
+  employeeId        String?          @unique
+  exportedAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  legalEntity LegalEntity        @relation(fields: [legalEntityId], references: [id])
+  department  Department?        @relation(fields: [departmentId], references: [id])
+  position    Position?          @relation(fields: [positionId], references: [id])
+  employee    Employee?          @relation(fields: [employeeId], references: [id])
+  comments    CandidateComment[]
+  requests    DocumentRequest[]
+  sessions    Session[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, updatedAt])
+  @@index([tenantId, iin])
+}
+
+model CandidateComment {
+  id           String   @id @default(cuid())
+  candidateId  String
+  authorUserId String?
+  byCandidate  Boolean  @default(false)
+  text         String
+  createdAt    DateTime @default(now())
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+}
+
+model DocumentRequest {
+  id                   String           @id @default(cuid())
+  tenantId             String
+  candidateId          String
+  requestTemplateId    String
+  sentById             String
+  status               DocRequestStatus @default(SENT)
+  consentStatus        ConsentStatus    @default(NONE)
+  consentAt            DateTime?
+  questionnaireAnswers Json             @default("{}")
+  readyAt              DateTime?
+  reviewedAt           DateTime?
+  reviewComment        String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  candidate Candidate           @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  template  RequestTemplate     @relation(fields: [requestTemplateId], references: [id])
+  documents CandidateDocument[]
+
+  @@index([tenantId])
+  @@index([candidateId])
+}
+
+model CandidateDocument {
+  id                String             @id @default(cuid())
+  documentRequestId String
+  personalDocTypeId String
+  required          Boolean            @default(true)
+  fieldKeys         Json               @default("[]")
+  status            CandidateDocStatus @default(PENDING)
+  values            Json               @default("{}")
+  autoFilledKeys    String[]
+  returnComment     String?
+  updatedAt         DateTime           @updatedAt
+
+  request DocumentRequest @relation(fields: [documentRequestId], references: [id], onDelete: Cascade)
+  docType PersonalDocType @relation(fields: [personalDocTypeId], references: [id])
+  files   StoredFile[]
+
+  @@unique([documentRequestId, personalDocTypeId])
+}
+
+// ───────────────────────────── Files ─────────────────────────────
+
+model StoredFile {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  key                 String   @unique // storage key
+  filename            String
+  mime                String
+  size                Int
+  sha256              String
+  uploadedById        String?
+  candidateDocumentId String?
+  createdAt           DateTime @default(now())
+
+  candidateDocument CandidateDocument? @relation(fields: [candidateDocumentId], references: [id], onDelete: SetNull)
+  versions          FileVersion[]
+
+  @@index([tenantId])
+  @@index([candidateDocumentId])
+}
+
+// ───────────────────────────── Documents & routes ─────────────────────────────
+
+model DocumentTemplate {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  body      Json // [{type:'heading'|'paragraph'|'fields'|'signatures', text, …}] with {{variables}}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documentTypes DocumentType[]
+
+  @@index([tenantId])
+}
+
+model RouteTemplate {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  steps     Json // [{order, action, rule, userId?, dueDays?}]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documentTypes DocumentType[]
+
+  @@index([tenantId])
+}
+
+model DocumentType {
+  id              String       @id @default(cuid())
+  tenantId        String
+  code            String
+  name            String
+  nameKk          String?
+  kind            DocumentKind
+  numberPattern   String       @default("{seq}-{MM}/{YY}")
+  templateId      String?
+  routeTemplateId String?
+  esutdRequired   Boolean      @default(false)
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+
+  template      DocumentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  routeTemplate RouteTemplate?    @relation(fields: [routeTemplateId], references: [id], onDelete: SetNull)
+  documents     Document[]
+  sequences     NumberSequence[]
+
+  @@unique([tenantId, code])
+}
+
+model Document {
+  id                String         @id @default(cuid())
+  tenantId          String
+  legalEntityId     String
+  documentTypeId    String
+  kind              DocumentKind
+  title             String
+  number            String?
+  registeredAt      DateTime?      @db.Date
+  backdated         Boolean        @default(false)
+  paperSigned       Boolean        @default(false)
+  status            DocumentStatus @default(DRAFT)
+  data              Json           @default("{}")
+  authorId          String
+  subjectEmployeeId String?
+  pdfFileId         String?
+  signedPdfFileId   String?
+  dueAt             DateTime?
+  currentStepOrder  Int?
+  completedAt       DateTime?
+  searchText        String         @default("")
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  legalEntity    LegalEntity       @relation(fields: [legalEntityId], references: [id])
+  documentType   DocumentType      @relation(fields: [documentTypeId], references: [id])
+  subject        Employee?         @relation(fields: [subjectEmployeeId], references: [id])
+  files          DocumentFile[]
+  steps          RouteStep[]
+  signatures     Signature[]
+  comments       DocumentComment[]
+  linksFrom      DocumentLink[]    @relation("LinkFrom")
+  linksTo        DocumentLink[]    @relation("LinkTo")
+  esutd          EsutdSubmission?
+  vndRecipients  VndRecipient[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, kind])
+  @@index([tenantId, createdAt])
+  @@index([subjectEmployeeId])
+  @@index([authorId])
+  @@index([documentTypeId])
+}
+
+model DocumentFile {
+  id             String   @id @default(cuid())
+  documentId     String
+  name           String
+  currentVersion Int      @default(1)
+  createdAt      DateTime @default(now())
+
+  document Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versions FileVersion[]
+
+  @@index([documentId])
+}
+
+model FileVersion {
+  id             String   @id @default(cuid())
+  documentFileId String
+  version        Int
+  storedFileId   String
+  uploadedById   String
+  createdAt      DateTime @default(now())
+
+  documentFile DocumentFile @relation(fields: [documentFileId], references: [id], onDelete: Cascade)
+  storedFile   StoredFile   @relation(fields: [storedFileId], references: [id])
+
+  @@unique([documentFileId, version])
+}
+
+model RouteStep {
+  id             String       @id @default(cuid())
+  documentId     String
+  order          Int // steps with the same order run in parallel
+  action         StepAction
+  assigneeUserId String
+  status         StepStatus   @default(WAITING)
+  dueAt          DateTime?
+  viewedAt       DateTime?
+  actedAt        DateTime?
+  actedById      String? // differs from assignee when a deputy acted
+  comment        String?
+  reminderSentAt DateTime?
+
+  document  Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  signature Signature?
+
+  @@index([documentId, order])
+  @@index([assigneeUserId, status])
+}
+
+model Signature {
+  id               String     @id @default(cuid())
+  tenantId         String
+  documentId       String
+  routeStepId      String?    @unique
+  signerUserId     String
+  onBehalfOfUserId String?
+  method           SignMethod
+  docHash          String // sha256 hex of the signed PDF bytes
+  signatureB64     String
+  publicKeyPem     String
+  certSubject      String
+  signedAt         DateTime   @default(now())
+
+  document Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  step     RouteStep? @relation(fields: [routeStepId], references: [id])
+
+  @@index([documentId])
+}
+
+model SigningSession {
+  id          String               @id @default(cuid())
+  tenantId    String
+  userId      String
+  method      SignMethod
+  documentIds String[]
+  tokenHash   String               @unique
+  status      SigningSessionStatus @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime             @default(now())
+
+  @@index([userId])
+}
+
+model DocumentLink {
+  id       String @id @default(cuid())
+  fromId   String
+  toId     String
+  relation String // e.g. ORDER_FOR, APPLICATION_OF, AMENDS
+
+  from Document @relation("LinkFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Document @relation("LinkTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId, relation])
+}
+
+model DocumentComment {
+  id         String   @id @default(cuid())
+  documentId String
+  authorId   String
+  text       String
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+model NumberSequence {
+  id             String @id @default(cuid())
+  tenantId       String
+  legalEntityId  String
+  documentTypeId String
+  year           Int
+  lastValue      Int    @default(0)
+
+  documentType DocumentType @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([legalEntityId, documentTypeId, year])
+}
+
+model EsutdSubmission {
+  id         String      @id @default(cuid())
+  tenantId   String
+  documentId String      @unique
+  status     EsutdStatus @default(NOT_SENT)
+  externalId String?
+  error      String?
+  attempts   Int         @default(0)
+  sentAt     DateTime?
+  updatedAt  DateTime    @updatedAt
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+}
+
+// ───────────────────────────── Requests & absences ─────────────────────────────
+
+model RequestType {
+  id                   String       @id @default(cuid())
+  tenantId             String
+  code                 String
+  name                 String
+  nameKk               String?
+  fields               Json         @default("[]") // extra fields beyond dates
+  applicationDocTypeId String
+  orderDocTypeId       String?
+  absenceKind          AbsenceKind?
+  usesVacationBalance  Boolean      @default(false)
+  requiresAttachment   Boolean      @default(false)
+  isActive             Boolean      @default(true)
+
+  requests Request[]
+
+  @@unique([tenantId, code])
+}
+
+model Request {
+  id                    String        @id @default(cuid())
+  tenantId              String
+  employeeId            String
+  requestTypeId         String
+  status                RequestStatus @default(DRAFT)
+  startDate             DateTime?     @db.Date
+  endDate               DateTime?     @db.Date
+  days                  Int?
+  data                  Json          @default("{}")
+  attachmentFileIds     String[]
+  applicationDocumentId String?       @unique
+  orderDocumentId       String?       @unique
+  createdAt             DateTime      @default(now())
+  submittedAt           DateTime?
+  completedAt           DateTime?
+
+  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  requestType RequestType @relation(fields: [requestTypeId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([employeeId])
+}
+
+model Absence {
+  id         String        @id @default(cuid())
+  tenantId   String
+  employeeId String
+  kind       AbsenceKind
+  startDate  DateTime      @db.Date
+  endDate    DateTime      @db.Date
+  source     AbsenceSource
+  sourceId   String?
+  note       String?
+  createdAt  DateTime      @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, startDate, endDate])
+  @@index([employeeId])
+}
+
+model VacationLedger {
+  id         String     @id @default(cuid())
+  tenantId   String
+  employeeId String
+  type       LedgerType
+  days       Decimal    @db.Decimal(7, 2)
+  date       DateTime   @db.Date
+  note       String?
+  requestId  String?
+  createdAt  DateTime   @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+}
+
+model Holiday {
+  id   String      @id @default(cuid())
+  date DateTime    @unique @db.Date
+  kind HolidayKind
+  name String
+}
+
+model VacationCampaign {
+  id        String         @id @default(cuid())
+  tenantId  String
+  year      Int
+  status    CampaignStatus @default(DRAFT)
+  deadline  DateTime?      @db.Date
+  createdAt DateTime       @default(now())
+
+  plans VacationPlan[]
+
+  @@unique([tenantId, year])
+}
+
+model VacationPlan {
+  id           String     @id @default(cuid())
+  campaignId   String
+  employeeId   String
+  status       PlanStatus @default(DRAFT)
+  comment      String?
+  approvedById String?
+  approvedAt   DateTime?
+  updatedAt    DateTime   @updatedAt
+
+  campaign VacationCampaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  employee Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  periods  VacationPlanPeriod[]
+
+  @@unique([campaignId, employeeId])
+}
+
+model VacationPlanPeriod {
+  id             String    @id @default(cuid())
+  planId         String
+  startDate      DateTime  @db.Date
+  endDate        DateTime  @db.Date
+  days           Int
+  reminderSentAt DateTime?
+
+  plan VacationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([startDate])
+}
+
+// ───────────────────────────── ВНД & sick leaves ─────────────────────────────
+
+model VndRecipient {
+  id             String             @id @default(cuid())
+  documentId     String
+  employeeId     String
+  status         VndRecipientStatus @default(PENDING)
+  sentAt         DateTime           @default(now())
+  acknowledgedAt DateTime?
+  signatureId    String?
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, employeeId])
+  @@index([employeeId, status])
+}
+
+model SickLeave {
+  id          String          @id @default(cuid())
+  tenantId    String
+  employeeId  String
+  number      String
+  startDate   DateTime        @db.Date
+  endDate     DateTime        @db.Date
+  source      SickLeaveSource @default(MANUAL)
+  fileId      String?
+  note        String?
+  createdById String
+  createdAt   DateTime        @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, startDate])
+}
+
+// ───────────────────────────── Time tracking ─────────────────────────────
+
+model ShiftTemplate {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String
+  startTime    String // "HH:MM" local
+  endTime      String
+  breakMinutes Int      @default(60)
+  color        String   @default("green") // token name
+  locationId   String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  location WorkLocation? @relation(fields: [locationId], references: [id])
+  shifts   Shift[]
+
+  @@index([tenantId])
+}
+
+model Shift {
+  id           String      @id @default(cuid())
+  tenantId     String
+  templateId   String?
+  employeeId   String? // null = open shift
+  date         DateTime    @db.Date
+  startAt      DateTime
+  endAt        DateTime
+  breakMinutes Int         @default(60)
+  title        String
+  color        String      @default("green")
+  status       ShiftStatus @default(DRAFT)
+  locationId   String?
+  createdById  String
+  createdAt    DateTime    @default(now())
+
+  template ShiftTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  employee Employee?        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  location WorkLocation?    @relation(fields: [locationId], references: [id])
+  claims   OpenShiftClaim[]
+
+  @@index([tenantId, date])
+  @@index([employeeId, date])
+}
+
+model OpenShiftClaim {
+  id         String         @id @default(cuid())
+  shiftId    String
+  employeeId String
+  status     ApprovalStatus @default(PENDING)
+  createdAt  DateTime       @default(now())
+
+  shift    Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, employeeId])
+}
+
+model TimeMark {
+  id               String             @id @default(cuid())
+  tenantId         String
+  employeeId       String
+  type             TimeMarkType
+  at               DateTime
+  lat              Float?
+  lng              Float?
+  accuracyM        Float?
+  distanceM        Float?
+  selfieFileId     String?
+  verification     VerificationStatus @default(SKIPPED)
+  verificationNote String?
+  source           MarkSource         @default(SELF)
+  createdAt        DateTime           @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, at])
+  @@index([tenantId, at])
+}
+
+model TimeRequest {
+  id          String          @id @default(cuid())
+  tenantId    String
+  employeeId  String
+  kind        TimeRequestKind
+  date        DateTime        @db.Date
+  data        Json // CORRECTION: {in?, out?, reason}; DAY_OFF_WORK: {start,end,reason}; SUBSTITUTION: {shiftId, substituteEmployeeId}
+  status      ApprovalStatus  @default(PENDING)
+  decidedById String?
+  decidedAt   DateTime?
+  comment     String?
+  createdAt   DateTime        @default(now())
+
+  employee Employee @relation("TimeRequestEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([employeeId])
+}
+
+model TimesheetConfirmation {
+  id                String   @id @default(cuid())
+  tenantId          String
+  managerEmployeeId String
+  year              Int
+  month             Int
+  confirmedAt       DateTime @default(now())
+
+  @@unique([managerEmployeeId, year, month])
+  @@index([tenantId, year, month])
+}
+
+// ───────────────────────────── Platform ─────────────────────────────
+
+model Notification {
+  id        String    @id @default(cuid())
+  tenantId  String
+  userId    String
+  type      String
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model Outbox {
+  id        String         @id @default(cuid())
+  tenantId  String?
+  channel   ContactChannel
+  to        String
+  subject   String?
+  body      String
+  status    OutboxStatus   @default(SENT)
+  error     String?
+  createdAt DateTime       @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([to])
+}
+
+model AuditLog {
+  id               String   @id @default(cuid())
+  tenantId         String
+  actorUserId      String?
+  actorCandidateId String?
+  action           String
+  entityType       String
+  entityId         String?
+  meta             Json     @default("{}")
+  ip               String?
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  prefix      String    @unique
+  keyHash     String
+  scopes      String[]
+  createdById String
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([tenantId])
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+}

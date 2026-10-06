@@ -1,0 +1,16 @@
+{
+  "name": "akere",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter ./apps/** dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "db:migrate": "pnpm --filter @akere/api db:migrate",
+    "db:seed": "pnpm --filter @akere/api db:seed",
+    "db:reset": "pnpm --filter @akere/api db:reset"
+  }
+}

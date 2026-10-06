@@ -154,8 +154,7 @@ Holiday (production calendar), Notification, AuditLog, ApiKey, OtpCode, Session.
 | C-4 | M1/M2 show 1С *pulling* candidates through a 1С extension; we can't ship 1С (BSL) code. | Provide the API + export files that such an extension consumes (F-13, F-50). The 1С-side processing is listed in KNOWN_GAPS. |
 | C-5 | M3@0:16 shows contact channels as multi-select checkboxes, while M1-p7 shows a single radio. | Multi-select (newer screen). The first selected channel is used for OTP. |
 
-## 8. Open questions
-Asked in chat (architecture-relevant). Everything else is defaulted above.
-- Q1: Scope depth (full 50-feature scope vs focused MVP).
-- Q2: Platform (responsive web + PWA vs native mobile app as well).
-- Q3: Deployment target (Docker self-host / on-prem vs managed cloud).
+## 8. Open questions (resolved 2026-10-06)
+- Q1 Scope → **Core first, then extend.** Phases 1–4 (auth, onboarding, documents/signing, requests/vacations) are polished end to end before ВНД, ЕСУТД and the timesheet.
+- Q2 Platform → **Responsive web + PWA.** No native app; camera and geolocation through browser APIs.
+- Q3 Deployment → **Docker Compose, cloud-ready** (Postgres + S3-compatible storage; MinIO locally).
