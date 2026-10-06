@@ -47,3 +47,16 @@ describe('messages', () => {
     expect(same.length).toBeLessThan(Object.keys(r).length * 0.05);
   });
 });
+
+import { moduleFiles } from './catalog';
+
+describe('module message files', () => {
+  it.each(Object.entries(moduleFiles))('%s: kk and en have the same keys and placeholders as ru', (_m, files) => {
+    const r = leaves(files.ru);
+    for (const other of [files.kk, files.en]) {
+      expect(keys(other).sort()).toEqual(keys(files.ru).sort());
+      const c = leaves(other);
+      for (const k of Object.keys(r)) expect([k, placeholders(c[k]!)]).toEqual([k, placeholders(r[k]!)]);
+    }
+  });
+});
