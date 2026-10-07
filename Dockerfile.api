@@ -18,4 +18,5 @@ COPY --from=build /app /app
 WORKDIR /app/apps/api
 EXPOSE 4000
 # Apply migrations, then start. Seeding is a separate explicit command (see README).
-CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node dist/server.js"]
+# SEED_ON_START=true re-creates demo data on every start (for hosts without persistent disks, e.g. Render free).
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && if [ \"$SEED_ON_START\" = \"true\" ]; then SEED_FORCE=true pnpm exec tsx prisma/seed/index.ts; fi && node dist/server.js"]

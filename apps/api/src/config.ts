@@ -18,11 +18,14 @@ const Env = z.object({
   PORT: z.coerce.number().default(4000),
   HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.string().min(1),
-  APP_URL: z.string().default('http://localhost:3000'),
+  APP_URL: z.string().optional(),
+  /** Host of the public web app without protocol (Render `fromService` gives only the host). Used when APP_URL is unset. */
+  APP_HOST: z.string().optional(),
   DEMO_MODE: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
   COOKIE_SECURE: z.enum(['true', 'false']).optional().transform((v) => (v === undefined ? undefined : v === 'true')),
   SESSION_TTL_HOURS: z.coerce.number().default(12),
-  SIGNING_MASTER_KEY: z.string().regex(/^[0-9a-f]{64}$/i, 'SIGNING_MASTER_KEY must be 32 bytes hex'),
+  /** 64 hex chars (used as-is) or any secret of ≥ 32 chars (SHA-256 derived). */
+  SIGNING_MASTER_KEY: z.string().min(32, 'SIGNING_MASTER_KEY must be at least 32 characters (openssl rand -hex 32)'),
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   STORAGE_DIR: z.string().default('./data/files'),
   S3_ENDPOINT: z.string().optional(),
@@ -47,7 +50,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
-  return parsed.data;
+  const data = parsed.data;
+  return { ...data, APP_URL: data.APP_URL ?? (data.APP_HOST ? `https://${data.APP_HOST}` : 'http://localhost:3000') };
 }
 
 export const config = loadConfig();

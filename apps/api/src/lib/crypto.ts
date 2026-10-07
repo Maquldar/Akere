@@ -22,7 +22,10 @@ export function safeEqual(a: string, b: string): boolean {
   return ab.length === bb.length && timingSafeEqual(ab, bb);
 }
 
-const masterKey = () => Buffer.from(config.SIGNING_MASTER_KEY, 'hex');
+const masterKey = () =>
+  /^[0-9a-f]{64}$/i.test(config.SIGNING_MASTER_KEY)
+    ? Buffer.from(config.SIGNING_MASTER_KEY, 'hex')
+    : createHash('sha256').update(config.SIGNING_MASTER_KEY).digest();
 
 export function encrypt(plain: string): { ciphertext: string; iv: string; tag: string } {
   const iv = randomBytes(12);

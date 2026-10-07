@@ -1,0 +1,47 @@
+# Render Blueprint: New → Blueprint → pick this repo/branch. Creates Postgres + API + web (free plans).
+# Free-plan notes: services sleep after 15 min idle (first request wakes them, ~1–3 min);
+# free Postgres expires after 30 days; there is no persistent disk, so the API re-seeds demo data on every start.
+databases:
+  - name: akere-db
+    plan: free
+    databaseName: akere
+    user: akere
+
+services:
+  - type: web
+    name: akere-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.api
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: akere-db, property: connectionString }
+      - key: SIGNING_MASTER_KEY
+        generateValue: true
+      - key: APP_HOST
+        fromService: { type: web, name: akere-web, property: host }
+      - key: DEMO_MODE
+        value: "true"
+      - key: SEED_ON_START
+        value: "true"
+      - key: STORAGE_DRIVER
+        value: local
+      - key: STORAGE_DIR
+        value: /tmp/akere-files
+      - key: TRUST_PROXY
+        value: "1"
+      - key: JOBS_ENABLED
+        value: "true"
+
+  - type: web
+    name: akere-web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.web
+    dockerContext: .
+    envVars:
+      # Host of the API service; Next.js bakes it into the /api rewrite at build time (https is added automatically).
+      - key: API_URL
+        fromService: { type: web, name: akere-api, property: host }

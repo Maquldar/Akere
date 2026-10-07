@@ -5,7 +5,9 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const isDev = process.env.NODE_ENV !== 'production';
-const apiUrl = (process.env.API_URL ?? 'http://localhost:4000').replace(/\/$/, '');
+// Hosting platforms may pass only a host (e.g. Render `fromService`), so default to https in that case.
+const rawApi = (process.env.API_URL ?? 'http://localhost:4000').replace(/\/$/, '');
+const apiUrl = /^https?:\/\//.test(rawApi) ? rawApi : `https://${rawApi}`;
 
 const csp = [
   "default-src 'self'",
