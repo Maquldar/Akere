@@ -12,7 +12,9 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx --env-file=.env prisma/seed/index.ts",
-    "db:reset": "prisma migrate reset --force --skip-seed && pnpm db:seed"
+    "db:reset": "prisma migrate reset --force --skip-seed && pnpm db:seed",
+    "postinstall": "prisma generate",
+    "db:generate": "prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed/index.ts"
