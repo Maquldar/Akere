@@ -1,0 +1,40 @@
+# Production override: only Caddy is public (80/443, automatic HTTPS); api, web and mailpit stay internal.
+# Usage on the server:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+# Requires in .env: SIGNING_MASTER_KEY=..., DOMAIN=hr.example.com (DNS A-record → server IP)
+services:
+  caddy:
+    image: caddy:2-alpine
+    depends_on: [web]
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env (e.g. hr.example.com or <server-ip>.sslip.io)}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  api:
+    restart: unless-stopped
+    ports: !reset []
+    environment:
+      APP_URL: https://${DOMAIN}
+      COOKIE_SECURE: "true"
+      # browser → caddy → web (Next rewrite) → api: two trusted hops.
+      TRUST_PROXY: "2"
+
+  web:
+    restart: unless-stopped
+    ports: !reset []
+
+  postgres:
+    restart: unless-stopped
+
+  mailpit:
+    restart: unless-stopped
+    ports: !reset []
+
+volumes:
+  caddy_data:
+  caddy_config:

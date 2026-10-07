@@ -1,0 +1,5 @@
+# Public entry point: automatic HTTPS (Let's Encrypt) for $DOMAIN, proxies everything to the web app.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
