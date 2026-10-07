@@ -3,11 +3,13 @@
 ## Option A: Render (free, quickest)
 
 1. Sign in at https://render.com with GitHub and allow access to the `Akere` repository.
-2. **New → Blueprint**, pick the repo and branch `claude/friendly-bohr-m1m2xf`. Render reads `render.yaml` and creates `akere-db` (Postgres), `akere-api` and `akere-web`.
-3. Click **Apply** and wait for both builds (≈10–15 min the first time).
-4. Open the `akere-web` URL (e.g. `https://akere-web.onrender.com`).
+2. Create a free Postgres at https://neon.tech (region Frankfurt), copy the connection string (direct, not `-pooler`).
+   You can also use an existing Render Postgres (its *Internal Database URL*).
+3. **New → Blueprint**, pick the repo and branch `claude/friendly-bohr-m1m2xf`. Render reads `render.yaml`, asks for `DATABASE_URL` (paste the string from step 2) and creates `akere-api` and `akere-web`.
+4. Click **Apply** and wait for both builds (≈10–15 min the first time).
+5. Open the `akere-web` URL (e.g. `https://akere-web.onrender.com`).
 
-Free-plan limits: services sleep after 15 min without traffic, and the first visit then takes 1–3 min (the API also re-creates the demo data on every start, because free services have no persistent disk). Free Postgres is deleted after 30 days. For an always-on demo use Option B.
+Free-plan limits: services sleep after 15 min without traffic, and the first visit then takes 1–3 min (the API also re-creates the demo data on every start, because free services have no persistent disk). For an always-on demo use Option B.
 
 ## Option B: your own server
 
