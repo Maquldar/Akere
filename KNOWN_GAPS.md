@@ -18,7 +18,7 @@ To go live, each item needs the credentials or accreditation listed. Nothing is 
 | Face verification | F-38 | Validates that the selfie is a real image of reasonable size and stores it; passes | Biometric vendor (liveness + match against the ID photo) | `FACE_PROVIDER`, `FACE_API_KEY` |
 | SSO / Active Directory | F-44 | Login button hidden | OIDC/SAML/LDAP config of the customer | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` |
 | 1С external processing | F-13 | REST endpoints `/public/candidates`, file export (json/xml/xlsx) and T-13 Excel export are ready | A 1С (BSL) external processing that calls these endpoints. Not part of this repo (needs a 1С developer and the customer's configuration) | — |
-| S3 storage | all files | Local disk (`./data/files`) or MinIO in Docker | Production bucket | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` |
+| S3 storage | all files | Local disk (`./data/files`; Docker volume `files` in compose) | Production bucket | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` |
 
 ## Not built (by decision)
 
@@ -38,4 +38,4 @@ To go live, each item needs the credentials or accreditation listed. Nothing is 
 | Zip-bomb check trusts declared sizes | Candidate import checks the zip central directory (≤ 20 MB uncompressed, ≤ 1000 entries); the 2 MB upload cap is the backstop. |
 | Face verification | Sandbox only checks that the selfie is a valid image (see table above). |
 | Questionnaire "file" fields | The candidate questionnaire builder omits the file field type: answers have no upload endpoint (attach documents via the document checklist instead). |
-| Compose stack in CI | Each image was verified separately. The full `docker compose up` (postgres, minio, mailpit) was not run inside the build sandbox. |
+| Compose stack in CI | Each image was verified separately. The full `docker compose up` (postgres, mailpit) was not run inside the build sandbox. |

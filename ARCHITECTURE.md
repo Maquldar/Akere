@@ -18,14 +18,14 @@
 | Jobs | **pg-boss** (Postgres-backed queue) | Reminders, deadline checks, ЕСУТД submissions, emails without adding Redis. |
 | Auth | **Own session auth**: argon2id password hashes, opaque session tokens in httpOnly `SameSite=Lax` cookies stored hashed in DB, OTP codes (email/SMS/WhatsApp) | Needed for OTP + password + candidate OTP-only portal (M2); no third-party lock-in; SSO via adapter. |
 | CSRF | SameSite=Lax cookies + mandatory `X-Requested-With`/Origin check on mutating requests | Same-origin app via Next rewrites; header check blocks cross-site form posts. |
-| File storage | **S3 API** (`@aws-sdk/client-s3`); **MinIO** in Docker; local-disk driver for dev/tests | Cloud-ready and on-prem-ready (M2 offers on-prem). |
+| File storage | **S3 API** (`@aws-sdk/client-s3`) for production; local-disk driver (Docker volume) for compose, dev and tests | Cloud-ready and on-prem-ready (M2 offers on-prem). |
 | PDF | **pdf-lib** + embedded Noto Sans (Cyrillic + Kazakh glyphs) | Pure JS generation of contracts/orders/signature sheets; no headless browser in production. |
 | Spreadsheets | **exceljs** | Candidate import template (F-03), T-13 export (F-43), sheets. |
 | QR | **qrcode** | eGov-style QR signing UX (sandbox). |
 | Email | **nodemailer** → SMTP; **Mailpit** in Docker for dev | Real SMTP in production by env vars; dev mailbox UI. |
 | Real-time | None (polling via TanStack Query `refetchInterval` on the "Today" board) | The only live screen is the timesheet board; polling every 30 s is enough and avoids websockets infra. |
 | Tests | **Vitest** (unit + API integration against a real Postgres test DB), **Playwright** (E2E) | Mainstream; Chromium is preinstalled in CI image. |
-| Hosting | **Docker Compose**: `web`, `api`, `postgres`, `minio`, `mailpit` | One command locally; same images on a VPS/on-prem; swap to managed Postgres/S3 by env. |
+| Hosting | **Docker Compose**: `web`, `api`, `postgres`, `mailpit` | One command locally; same images on a VPS/on-prem; swap to managed Postgres/S3 by env. |
 
 ## 2. Folder structure
 
@@ -159,7 +159,7 @@ signing/ЕСУТД screens), so nothing is faked silently.
 | `messaging.email` | `send({to, subject, html, text})` | SMTP to Mailpit (Docker) or the `Outbox` table in tests | SMTP (any provider) by env: **ready** |
 | `messaging.sms` | `send({to, text})` | Writes to the `Outbox` table, visible in Admin → Outbox | Provider (e.g. Mobizon/SMSC.kz): **needs credentials** (KNOWN_GAPS) |
 | `messaging.whatsapp` | `send({to, template, params})` | Same as SMS | WhatsApp Business API: **needs credentials** |
-| `storage` | `put/get/delete/presign` | Local disk (`./data/files`) or MinIO | AWS S3 / any S3: **ready** by env |
+| `storage` | `put/get/delete/presign` | Local disk (`./data/files`, Docker volume `files`) | AWS S3 / any S3: **ready** by env |
 | `personalFile` | `requestConsent(iin, phone)`, `fetch(iin) → documents[]` | Consent auto-confirms after the user types `511` in a simulated SMS dialog; returns deterministic realistic data (from ИИН seed) + a generated "Личные данные" PDF | Цифровое личное дело (via eGov/mGov): **needs accreditation** |
 | `signing` | `createSession(docIds, signer, method) → {qr, sessionId}`, `complete(sessionId)`, `verify(signature)` | ECDSA P-256 key per user (private key AES-256-GCM encrypted with `SIGNING_MASTER_KEY`); QR opens `/sign/<session>` (in-app "eGov mobile sandbox" page) to confirm; real signature over the SHA-256 of the PDF | eGov mobile QR / NCALayer (CMS/GOST): **needs НУЦ integration** |
 | `esutd` | `submit(contract) → {externalId}`, `status(id)` | Validates required fields, returns ids after a delay via job, 5% simulated rejection with a reason for testing | Enbek ЕСУТД API: **needs access** |

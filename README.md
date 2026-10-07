@@ -48,10 +48,10 @@ Regenerate with `node apps/web/e2e/capture-screens.mjs http://localhost:3000` ag
 |-------|------|
 | Frontend | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS 4, Radix UI, TanStack Query/Table, next-intl, PWA |
 | Backend | Fastify 5, TypeScript, Zod, Prisma 6, PostgreSQL 16, pg-boss jobs |
-| Files & docs | S3/MinIO (or local disk), pdf-lib + Noto Sans (Cyrillic + Kazakh), exceljs, qrcode |
+| Files & docs | Local disk volume or any S3-compatible storage, pdf-lib + Noto Sans (Cyrillic + Kazakh), exceljs, qrcode |
 | Security | argon2id, httpOnly session cookies, OTP 2FA, CSRF header check, rate limits + lockout, magic-byte upload checks, row-level scoping, audit log |
 | Tests | Vitest (API integration against real Postgres, web unit), Playwright (E2E) |
-| Deploy | Docker Compose: web, api, postgres, minio, mailpit |
+| Deploy | Docker Compose: web, api, postgres, mailpit |
 
 ## Quick start (Docker)
 
