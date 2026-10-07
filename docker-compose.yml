@@ -38,7 +38,10 @@ services:
     ports: ["4000:4000"]
 
   web:
-    build: { context: ., dockerfile: Dockerfile.web }
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args: { API_URL: "http://api:4000" }
     depends_on: [api]
     environment:
       API_URL: http://api:4000
